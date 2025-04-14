@@ -6,6 +6,7 @@
     <title>Modern Music Player</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/CoreUI-Icons/2.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="light-mode">
     <div class="app-container">
@@ -21,48 +22,33 @@
                 <li class="nav-item" id="upload-music"><i class="fas fa-upload"></i> Upload Music</li>
                 <li class="nav-item"><i class="fas fa-heart"></i> Liked Songs</li>
             </ul>
-            <div class="playlist-container">
-                <h3>Your Playlists</h3>
-                <ul class="playlist-list">
-                    <li>Chill Vibes</li>
-                    <li>Workout Mix</li>
-                    <li>Study Session</li>
-                    <li>Road Trip</li>
-                    <li>Party Time</li>
-                </ul>
-            </div>
         </nav>
-
-        <!-- Main Content Area -->
+        
         <main class="main-content">
             <header class="top-bar">
-                <div class="navigation-buttons">
-                    <button class="nav-btn"><i class="fas fa-chevron-left"></i></button>
-                    <button class="nav-btn"><i class="fas fa-chevron-right"></i></button>
-                </div>
                 <div class="theme-toggle">
                     <button id="theme-toggle-btn">
-                        <i class="fas fa-sun"></i>
+                        ☀️
                     </button>
                 </div>
                 <div class="user-menu">
                     <div class="user-avatar">
                         <i class="fas fa-user-circle"></i>
                     </div>
-                    <span class="username">User</span>
-                    <i class="fas fa-caret-down"></i>
+                    <span class="username">welcome</span>
                 </div>
             </header>
 
+            <!-- Upload Section (Added) -->
             <section id="upload-section" class="upload-section">
-                <h2>Add Your Music</h2>
+                <h2>Upload Your Music</h2>
                 <div class="upload-container">
-                    <p>Select music files or a folder to add to your library:</p>
-                    <input type="file" id="file-input" multiple accept=".mp3,.wav,.ogg,.flac,.m4a">
+                    <p>Select audio files to add to your library</p>
                     <label for="file-input" class="file-input-label">
-                        <i class="fas fa-music"></i> Choose Files
+                        <i class="fas fa-plus"></i> Choose Files
                     </label>
-                    <div id="upload-status" class="upload-status"></div>
+                    <input type="file" id="file-input" accept="audio/*" multiple>
+                    <p id="upload-status" class="upload-status"></p>
                 </div>
             </section>
 
@@ -75,23 +61,11 @@
                     </div>
                     <div class="featured-item">
                         <div class="item-cover"></div>
-                        <span>Top Artists</span>
-                    </div>
-                    <div class="featured-item">
-                        <div class="item-cover"></div>
-                        <span>New Releases</span>
-                    </div>
-                    <div class="featured-item">
-                        <div class="item-cover"></div>
-                        <span>Podcasts</span>
+                        <span>All Songs</span>
                     </div>
                     <div class="featured-item">
                         <div class="item-cover"></div>
                         <span>Made For You</span>
-                    </div>
-                    <div class="featured-item">
-                        <div class="item-cover"></div>
-                        <span>Charts</span>
                     </div>
                 </div>
             </section>

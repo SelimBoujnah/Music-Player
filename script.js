@@ -2,13 +2,14 @@
 document.addEventListener('DOMContentLoaded', function() {
     // DOM Elements
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
-    const themeIcon = themeToggleBtn.querySelector('i');
     const body = document.body;
     const uploadMusicBtn = document.getElementById('upload-music');
     const uploadSection = document.getElementById('upload-section');
     const fileInput = document.getElementById('file-input');
     const uploadStatus = document.getElementById('upload-status');
     const musicLibrary = document.getElementById('music-library');
+    const likeBtn = document.querySelector('.like-btn');
+    const likeIcon = likeBtn.querySelector('i');
     
     // Player Controls
     const audioPlayer = document.getElementById('audio-player');
@@ -37,13 +38,15 @@ document.addEventListener('DOMContentLoaded', function() {
     let shuffleMode = false;
     let repeatMode = false;
     let previousVolume = 70; // Default volume level (70%)
+    let isLiked = false; // Track like state
     
     // Theme management
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         body.classList.add('dark-mode');
-        themeIcon.classList.remove('fa-sun');
-        themeIcon.classList.add('fa-moon');
+        themeToggleBtn.textContent = '🌙';
+    } else {
+        themeToggleBtn.textContent = '☀️';
     }
     
     // Theme toggle event listener
@@ -52,13 +55,24 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update icon
         if (body.classList.contains('dark-mode')) {
-            themeIcon.classList.remove('fa-sun');
-            themeIcon.classList.add('fa-moon');
+            themeToggleBtn.textContent = '🌙';
             localStorage.setItem('theme', 'dark');
         } else {
-            themeIcon.classList.remove('fa-moon');
-            themeIcon.classList.add('fa-sun');
+            themeToggleBtn.textContent = '☀️';
             localStorage.setItem('theme', 'light');
+        }
+    });
+    
+    // Like button functionality
+    likeBtn.addEventListener('click', function() {
+        isLiked = !isLiked;
+        
+        if (isLiked) {
+            likeIcon.classList.remove('far');
+            likeIcon.classList.add('fas');
+        } else {
+            likeIcon.classList.remove('fas');
+            likeIcon.classList.add('far');
         }
     });
     
@@ -105,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         let loadedCount = 0;
         
-        files.forEach((file, index) => {
+        files.forEach((file) => {
             const reader = new FileReader();
             
             reader.onload = function(e) {
@@ -119,7 +133,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         artist: 'Unknown Artist',
                         album: 'Unknown Album',
                         duration: tempAudio.duration,
-                        file: file,
                         url: e.target.result
                     };
                     
@@ -174,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
         
         trackItem.innerHTML = `
-            <div class="track-number">${tracks.length}</div>
+            <div class="track-number">${trackData.id + 1}</div>
             <div class="track-cover"></div>
             <div class="track-info">
                 <span class="track-name">${trackData.name}</span>
@@ -200,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
         trackItem.addEventListener('mouseout', function() {
             const trackNumber = this.querySelector('.track-number');
             if (!this.classList.contains('active')) {
-                trackNumber.textContent = this.dataset.id;
+                trackNumber.textContent = parseInt(this.dataset.id) + 1;
             }
         });
         
@@ -225,6 +238,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update UI
         currentTrackName.textContent = track.name;
         currentTrackArtist.textContent = track.artist;
+        
+        // Reset like button
+        isLiked = false;
+        likeIcon.classList.remove('fas');
+        likeIcon.classList.add('far');
         
         // Update active track in list
         document.querySelectorAll('.track-item').forEach(item => {
@@ -265,8 +283,8 @@ document.addEventListener('DOMContentLoaded', function() {
         playIcon.classList.add('fa-play');
     }
     
-       // Play/Pause button event
-       playButton.addEventListener('click', function() {
+    // Play/Pause button event
+    playButton.addEventListener('click', function() {
         if (tracks.length === 0) return;
 
         if (isPlaying) {
@@ -344,14 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
         audioPlayer.volume = volume;
         volumeFill.style.width = `${volume * 100}%`;
 
-        if (volume === 0) {
-            volumeIcon.className = 'fas fa-volume-mute';
-        } else if (volume < 0.5) {
-            volumeIcon.className = 'fas fa-volume-down';
-        } else {
-            volumeIcon.className = 'fas fa-volume-up';
-        }
-
+        updateVolumeIcon(volume);
         previousVolume = volume * 100;
     });
 
@@ -365,12 +376,18 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             audioPlayer.volume = previousVolume / 100;
             volumeFill.style.width = `${previousVolume}%`;
-
-            if (previousVolume < 50) {
-                volumeIcon.className = 'fas fa-volume-down';
-            } else {
-                volumeIcon.className = 'fas fa-volume-up';
-            }
+            updateVolumeIcon(previousVolume / 100);
         }
     });
+    
+    // Helper function to update volume icon
+    function updateVolumeIcon(volume) {
+        if (volume === 0) {
+            volumeIcon.className = 'fas fa-volume-mute';
+        } else if (volume < 0.5) {
+            volumeIcon.className = 'fas fa-volume-down';
+        } else {
+            volumeIcon.className = 'fas fa-volume-up';
+        }
+    }
 });
