@@ -7,8 +7,8 @@
     --text-primary: #121212;
     --text-secondary: #606060;
     --text-tertiary: #909090;
-    --accent-color: #1DB954;
-    --hover-color: #1ed760;
+    --accent-color: #cf1c12;
+    --hover-color: #661205;
     --border-color: #e0e0e0;
     --sidebar-bg: #f0f0f0;
     --player-bg: #f8f8f8;
@@ -22,8 +22,8 @@
     --text-primary: #ffffff;
     --text-secondary: #b3b3b3;
     --text-tertiary: #8c8c8c;
-    --accent-color: #1DB954;
-    --hover-color: #1ed760;
+    --accent-color: #cf1c12;
+    --hover-color: #661205;
     --border-color: #333333;
     --sidebar-bg: #000000;
     --player-bg: #181818;
@@ -90,29 +90,6 @@ body {
     background-color: var(--background-elevated);
 }
 
-.playlist-container h3 {
-    font-size: 14px;
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 16px;
-}
-
-.playlist-list {
-    list-style-type: none;
-}
-
-.playlist-list li {
-    padding: 8px 0;
-    cursor: pointer;
-    color: var(--text-secondary);
-    transition: color 0.2s;
-}
-
-.playlist-list li:hover {
-    color: var(--text-primary);
-}
-
 /* Main Content Area */
 .main-content {
     flex: 1;
@@ -128,39 +105,39 @@ body {
     margin-bottom: 24px;
 }
 
-.navigation-buttons {
-    display: flex;
-    gap: 16px;
-}
-
-.nav-btn {
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
-    border: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-
-.dark-mode .nav-btn {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
+/* Fixed theme toggle button */
 .theme-toggle button {
     background: none;
     border: none;
-    font-size: 20px;
     color: var(--text-primary);
     cursor: pointer;
     transition: transform 0.3s;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .theme-toggle button:hover {
     transform: scale(1.1);
+}
+
+/* Fix for CoreUI icons */
+.cil-sun, .cil-moon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+}
+
+/* Fallback icon styling to ensure visibility */
+.theme-toggle button i:before {
+    content: "☀️";
+    font-style: normal;
+}
+
+.dark-mode .theme-toggle button i:before {
+    content: "🌙";
 }
 
 .user-menu {
@@ -407,6 +384,10 @@ body {
     color: var(--accent-color);
 }
 
+.like-btn .fas {
+    color: var(--accent-color);
+}
+
 .player-center {
     display: flex;
     flex-direction: column;
@@ -511,4 +492,13 @@ body {
     width: 70%; /* Default volume */
     background-color: var(--accent-color);
     border-radius: 2px;
+}
+
+/* Styles for the hover effect on tracks */
+.track-item .track-number .fa-play {
+    color: var(--text-primary);
+}
+
+.track-item.active .track-number .fa-volume-up {
+    color: var(--accent-color);
 }
