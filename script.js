@@ -1,17 +1,18 @@
-// Music Player with File Loading Functionality
+// Music Player Integration
 document.addEventListener('DOMContentLoaded', function() {
-    // DOM Elements
+    // DOM Elements (using your existing selectors)
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
-    const themeIcon = themeToggleBtn.querySelector('i');
     const body = document.body;
     const uploadMusicBtn = document.getElementById('upload-music');
     const uploadSection = document.getElementById('upload-section');
     const fileInput = document.getElementById('file-input');
     const uploadStatus = document.getElementById('upload-status');
     const musicLibrary = document.getElementById('music-library');
+    const likeBtn = document.querySelector('.like-btn');
+    const likeIcon = likeBtn.querySelector('i');
     
     // Player Controls
-    const audioPlayer = document.getElementById('audio-player');
+    const audioElement = document.getElementById('audio-player');
     const playButton = document.getElementById('play-btn');
     const playIcon = playButton.querySelector('i');
     const prevButton = document.getElementById('prev-btn');
@@ -30,35 +31,83 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentTrackArtist = document.getElementById('current-track-artist');
     const currentTrackCover = document.getElementById('current-track-cover');
     
-    // Player State
-    let isPlaying = false;
-    let currentTrackIndex = 0;
+    // State
+    let isLiked = false;
     let tracks = [];
-    let shuffleMode = false;
-    let repeatMode = false;
-    let previousVolume = 70; // Default volume level (70%)
     
-    // Theme management
+    // Initialize audio engine
+    const audioEngine = new AudioEngine();
+    audioEngine.init(audioElement);
+    
+    // Set up audio engine callbacks
+    audioEngine.onTimeUpdate = function(data) {
+        // Update progress bar
+        progressFill.style.width = `${data.progress}%`;
+        
+        // Update time display
+        currentTimeDisplay.textContent = AudioEngine.formatTime(data.currentTime);
+        if (!isNaN(data.duration)) {
+            totalTimeDisplay.textContent = AudioEngine.formatTime(data.duration);
+        }
+    };
+    
+    audioEngine.onTrackChange = function(track, index) {
+        // Update UI
+        currentTrackName.textContent = track.name;
+        currentTrackArtist.textContent = track.artist;
+        
+        // Reset like button
+        isLiked = false;
+        likeIcon.classList.remove('fas');
+        likeIcon.classList.add('far');
+        
+        // Update active track in list
+        updateActiveTrack(index);
+    };
+    
+    audioEngine.onPlayStateChange = function(isPlaying) {
+        // Update play button icon
+        if (isPlaying) {
+            playIcon.classList.remove('fa-play');
+            playIcon.classList.add('fa-pause');
+        } else {
+            playIcon.classList.remove('fa-pause');
+            playIcon.classList.add('fa-play');
+        }
+    };
+    
+    // Theme management (your existing code)
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         body.classList.add('dark-mode');
-        themeIcon.classList.remove('fa-sun');
-        themeIcon.classList.add('fa-moon');
+        themeToggleBtn.textContent = '🌙';
+    } else {
+        themeToggleBtn.textContent = '☀️';
     }
     
-    // Theme toggle event listener
     themeToggleBtn.addEventListener('click', function() {
         body.classList.toggle('dark-mode');
         
         // Update icon
         if (body.classList.contains('dark-mode')) {
-            themeIcon.classList.remove('fa-sun');
-            themeIcon.classList.add('fa-moon');
+            themeToggleBtn.textContent = '🌙';
             localStorage.setItem('theme', 'dark');
         } else {
-            themeIcon.classList.remove('fa-moon');
-            themeIcon.classList.add('fa-sun');
+            themeToggleBtn.textContent = '☀️';
             localStorage.setItem('theme', 'light');
+        }
+    });
+    
+    // Like button functionality
+    likeBtn.addEventListener('click', function() {
+        isLiked = !isLiked;
+        
+        if (isLiked) {
+            likeIcon.classList.remove('far');
+            likeIcon.classList.add('fas');
+        } else {
+            likeIcon.classList.remove('fas');
+            likeIcon.classList.add('far');
         }
     });
     
@@ -96,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
         processAudioFiles(audioFiles);
     });
     
-    // Process audio files
+    // Enhanced audio file processing
     function processAudioFiles(files) {
         // Clear existing library if this is first upload
         if (tracks.length === 0) {
@@ -104,8 +153,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         let loadedCount = 0;
+        let metadataExtracted = 0;
+        const newTracks = [];
         
-        files.forEach((file, index) => {
+        files.forEach((file) => {
             const reader = new FileReader();
             
             reader.onload = function(e) {
@@ -113,48 +164,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 const tempAudio = new Audio(e.target.result);
                 
                 tempAudio.onloadedmetadata = function() {
+                    // Create track object with basic info
                     const trackData = {
-                        id: tracks.length,
+                        id: tracks.length + newTracks.length,
                         name: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
                         artist: 'Unknown Artist',
                         album: 'Unknown Album',
                         duration: tempAudio.duration,
-                        file: file,
-                        url: e.target.result
+                        url: e.target.result,
+                        fileType: file.type
                     };
                     
                     // Try to extract artist and title from filename
-                    const nameParts = trackData.name.split(' - ');
-                    if (nameParts.length > 1) {
-                        trackData.artist = nameParts[0];
-                        trackData.name = nameParts.slice(1).join(' - ');
-                    }
+                    extractMetadataFromFilename(trackData);
                     
-                    // Add to tracks array
-                    tracks.push(trackData);
+                    // Add to new tracks array
+                    newTracks.push(trackData);
+                    metadataExtracted++;
                     
-                    // Add to UI
-                    addTrackToUI(trackData);
-                    
-                    loadedCount++;
-                    uploadStatus.textContent = `Loaded ${loadedCount} of ${files.length} file(s)`;
-                    
-                    // If all files loaded, load the first track
-                    if (loadedCount === files.length) {
-                        if (tracks.length === files.length) {
-                            // This was the first batch of files
-                            loadTrack(0);
-                        }
-                        uploadStatus.textContent = `Successfully added ${files.length} track(s)`;
-                        setTimeout(() => {
-                            uploadStatus.textContent = '';
-                        }, 3000);
+                    // Check if all metadata has been extracted
+                    if (metadataExtracted === files.length) {
+                        finishLoadingTracks(newTracks);
                     }
                 };
                 
                 tempAudio.onerror = function() {
                     loadedCount++;
+                    metadataExtracted++;
                     uploadStatus.textContent = `Error loading file: ${file.name}`;
+                    
+                    // Check if all files have been processed
+                    if (metadataExtracted === files.length) {
+                        finishLoadingTracks(newTracks);
+                    }
                 };
             };
             
@@ -162,19 +204,56 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Add track to UI
+    // Helper function to extract metadata from filename
+    function extractMetadataFromFilename(trackData) {
+        // Try to match "Artist - Title" pattern
+        const nameParts = trackData.name.split(' - ');
+        if (nameParts.length > 1) {
+            trackData.artist = nameParts[0];
+            trackData.name = nameParts.slice(1).join(' - ');
+        }
+        
+        // Try to extract album from folder structure (if available)
+        // This would need file path info which isn't available in browser
+        
+        return trackData;
+    }
+    
+    // Helper function to finish loading tracks
+    function finishLoadingTracks(newTracks) {
+        // Add new tracks to the global tracks array
+        tracks = [...tracks, ...newTracks];
+        
+        // Add to UI
+        newTracks.forEach(track => {
+            addTrackToUI(track);
+        });
+        
+        // Update audio engine
+        audioEngine.loadTracks(tracks);
+        
+        // Load first track if this is the first batch
+        if (tracks.length === newTracks.length) {
+            audioEngine.loadTrack(0);
+        }
+        
+        uploadStatus.textContent = `Successfully added ${newTracks.length} track(s)`;
+        setTimeout(() => {
+            uploadStatus.textContent = '';
+        }, 3000);
+    }
+    
+    // Add track to UI (mostly from your existing code)
     function addTrackToUI(trackData) {
         const trackItem = document.createElement('div');
         trackItem.className = 'track-item';
         trackItem.dataset.id = trackData.id;
         
         // Format duration
-        const minutes = Math.floor(trackData.duration / 60);
-        const seconds = Math.floor(trackData.duration % 60);
-        const formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        const formattedDuration = AudioEngine.formatTime(trackData.duration);
         
         trackItem.innerHTML = `
-            <div class="track-number">${tracks.length}</div>
+            <div class="track-number">${trackData.id + 1}</div>
             <div class="track-cover"></div>
             <div class="track-info">
                 <span class="track-name">${trackData.name}</span>
@@ -187,8 +266,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add click event to play this track
         trackItem.addEventListener('click', function() {
             const trackId = parseInt(this.dataset.id);
-            loadTrack(trackId);
-            playTrack();
+            audioEngine.loadTrack(trackId);
+            audioEngine.play();
         });
         
         // Add hover play icon
@@ -200,150 +279,84 @@ document.addEventListener('DOMContentLoaded', function() {
         trackItem.addEventListener('mouseout', function() {
             const trackNumber = this.querySelector('.track-number');
             if (!this.classList.contains('active')) {
-                trackNumber.textContent = this.dataset.id;
+                trackNumber.textContent = parseInt(this.dataset.id) + 1;
             }
         });
         
         musicLibrary.appendChild(trackItem);
     }
     
-    // Load track
-    function loadTrack(index) {
-        if (tracks.length === 0) return;
-        
-        // Bounds check
-        if (index < 0) index = tracks.length - 1;
-        if (index >= tracks.length) index = 0;
-        
-        currentTrackIndex = index;
-        const track = tracks[index];
-        
-        // Update audio source
-        audioPlayer.src = track.url;
-        audioPlayer.load();
-        
-        // Update UI
-        currentTrackName.textContent = track.name;
-        currentTrackArtist.textContent = track.artist;
-        
-        // Update active track in list
+    // Update active track in library
+    function updateActiveTrack(index) {
         document.querySelectorAll('.track-item').forEach(item => {
             item.classList.remove('active');
-            if (parseInt(item.dataset.id) === index) {
+            const trackNumber = item.querySelector('.track-number');
+            const itemId = parseInt(item.dataset.id);
+            
+            if (itemId === index) {
                 item.classList.add('active');
-                const trackNumber = item.querySelector('.track-number');
                 trackNumber.innerHTML = '<i class="fas fa-volume-up"></i>';
+            } else {
+                trackNumber.textContent = itemId + 1;
             }
         });
-        
-        // Reset progress bar
-        progressFill.style.width = '0%';
-        currentTimeDisplay.textContent = '0:00';
-        
-        // Set volume
-        audioPlayer.volume = parseFloat(volumeFill.style.width) / 100 || 0.7;
     }
     
-    // Play track
-    function playTrack() {
-        audioPlayer.play()
-            .then(() => {
-                isPlaying = true;
-                playIcon.classList.remove('fa-play');
-                playIcon.classList.add('fa-pause');
-            })
-            .catch(error => {
-                console.error('Error playing track:', error);
-            });
-    }
-    
-    // Pause track
-    function pauseTrack() {
-        audioPlayer.pause();
-        isPlaying = false;
-        playIcon.classList.remove('fa-pause');
-        playIcon.classList.add('fa-play');
-    }
-    
-       // Play/Pause button event
-       playButton.addEventListener('click', function() {
+    // Player controls event listeners
+    playButton.addEventListener('click', function() {
         if (tracks.length === 0) return;
-
-        if (isPlaying) {
-            pauseTrack();
-        } else {
-            playTrack();
-        }
+        audioEngine.togglePlay();
     });
-
-    // Previous button event
+    
     prevButton.addEventListener('click', function() {
-        loadTrack(currentTrackIndex - 1);
-        playTrack();
+        audioEngine.previous();
     });
-
-    // Next button event
+    
     nextButton.addEventListener('click', function() {
-        loadTrack(currentTrackIndex + 1);
-        playTrack();
+        audioEngine.next();
     });
-
-    // Shuffle button toggle
+    
     shuffleButton.addEventListener('click', function() {
-        shuffleMode = !shuffleMode;
-        this.classList.toggle('active');
+        const shuffleEnabled = audioEngine.toggleShuffle();
+        this.classList.toggle('active', shuffleEnabled);
     });
-
-    // Repeat button toggle
+    
     repeatButton.addEventListener('click', function() {
-        repeatMode = !repeatMode;
-        this.classList.toggle('active');
+        const repeatEnabled = audioEngine.toggleRepeat();
+        this.classList.toggle('active', repeatEnabled);
     });
-
-    // Track end event
-    audioPlayer.addEventListener('ended', function() {
-        if (repeatMode) {
-            playTrack();
-        } else if (shuffleMode) {
-            const nextIndex = Math.floor(Math.random() * tracks.length);
-            loadTrack(nextIndex);
-            playTrack();
-        } else {
-            loadTrack(currentTrackIndex + 1);
-            playTrack();
-        }
-    });
-
-    // Progress bar update
-    audioPlayer.addEventListener('timeupdate', function() {
-        const progressPercent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
-        progressFill.style.width = `${progressPercent}%`;
-
-        // Update current time
-        const minutes = Math.floor(audioPlayer.currentTime / 60);
-        const seconds = Math.floor(audioPlayer.currentTime % 60);
-        currentTimeDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-
-        // Update total time
-        if (!isNaN(audioPlayer.duration)) {
-            const totalMinutes = Math.floor(audioPlayer.duration / 60);
-            const totalSeconds = Math.floor(audioPlayer.duration % 60);
-            totalTimeDisplay.textContent = `${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
-        }
-    });
-
-    // Seek bar interaction
+    
+    // Progress bar interaction
     progressBar.addEventListener('click', function(e) {
         const clickPosition = e.offsetX / progressBar.offsetWidth;
-        audioPlayer.currentTime = clickPosition * audioPlayer.duration;
+        audioEngine.seekByPercentage(clickPosition * 100);
     });
-
+    
     // Volume bar interaction
     volumeBar.addEventListener('click', function(e) {
         const volume = e.offsetX / volumeBar.offsetWidth;
-        audioPlayer.volume = volume;
+        audioEngine.setVolume(volume);
         volumeFill.style.width = `${volume * 100}%`;
-
+        updateVolumeIcon(volume);
+    });
+    
+    // Volume button mute/unmute toggle
+    let previousVolume = 0.7; // 70%
+    volumeButton.addEventListener('click', function() {
+        if (audioEngine.volume > 0) {
+            previousVolume = audioEngine.volume;
+            audioEngine.setVolume(0);
+            volumeFill.style.width = '0%';
+            volumeIcon.className = 'fas fa-volume-mute';
+        } else {
+            audioEngine.setVolume(previousVolume);
+            volumeFill.style.width = `${previousVolume * 100}%`;
+            updateVolumeIcon(previousVolume);
+        }
+    });
+    
+    // Helper function to update volume icon
+    function updateVolumeIcon(volume) {
         if (volume === 0) {
             volumeIcon.className = 'fas fa-volume-mute';
         } else if (volume < 0.5) {
@@ -351,26 +364,43 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             volumeIcon.className = 'fas fa-volume-up';
         }
-
-        previousVolume = volume * 100;
-    });
-
-    // Volume button mute/unmute toggle
-    volumeButton.addEventListener('click', function() {
-        if (audioPlayer.volume > 0) {
-            previousVolume = audioPlayer.volume * 100;
-            audioPlayer.volume = 0;
-            volumeFill.style.width = '0%';
-            volumeIcon.className = 'fas fa-volume-mute';
-        } else {
-            audioPlayer.volume = previousVolume / 100;
-            volumeFill.style.width = `${previousVolume}%`;
-
-            if (previousVolume < 50) {
-                volumeIcon.className = 'fas fa-volume-down';
-            } else {
-                volumeIcon.className = 'fas fa-volume-up';
-            }
+    }
+    
+    // Optional: Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Only if we're not in an input field
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        
+        switch(e.key) {
+            case ' ': // Space bar
+                e.preventDefault();
+                if (tracks.length > 0) audioEngine.togglePlay();
+                break;
+            case 'ArrowRight':
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    audioEngine.next();
+                }
+                break;
+            case 'ArrowLeft':
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    audioEngine.previous();
+                }
+                break;
+            case 'm':
+                e.preventDefault();
+                if (audioEngine.volume > 0) {
+                    previousVolume = audioEngine.volume;
+                    audioEngine.setVolume(0);
+                    volumeFill.style.width = '0%';
+                    volumeIcon.className = 'fas fa-volume-mute';
+                } else {
+                    audioEngine.setVolume(previousVolume);
+                    volumeFill.style.width = `${previousVolume * 100}%`;
+                    updateVolumeIcon(previousVolume);
+                }
+                break;
         }
     });
 });
