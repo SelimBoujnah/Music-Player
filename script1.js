@@ -1,4 +1,4 @@
-// Music Player Integration
+// Music Player Integration with Enhanced Metadata Extraction
 document.addEventListener('DOMContentLoaded', function() {
     // DOM Elements (using your existing selectors)
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -55,6 +55,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update UI
         currentTrackName.textContent = track.name;
         currentTrackArtist.textContent = track.artist;
+        
+        // Update cover art if available (new feature from metadata extractor)
+        if (track.coverArt) {
+            currentTrackCover.innerHTML = `<img src="${track.coverArt}" alt="Album Cover">`;
+        } else {
+            // Default placeholder
+            currentTrackCover.innerHTML = `<div class="cover-placeholder"><i class="fas fa-music"></i></div>`;
+        }
         
         // Reset like button
         isLiked = false;
@@ -145,78 +153,53 @@ document.addEventListener('DOMContentLoaded', function() {
         processAudioFiles(audioFiles);
     });
     
-    // Enhanced audio file processing
+    // Enhanced audio file processing using AudioMetadataExtractor
     function processAudioFiles(files) {
         // Clear existing library if this is first upload
         if (tracks.length === 0) {
             musicLibrary.innerHTML = '';
         }
         
-        let loadedCount = 0;
-        let metadataExtracted = 0;
+        let processedCount = 0;
         const newTracks = [];
         
-        files.forEach((file) => {
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                // Create a temporary audio element to get metadata
-                const tempAudio = new Audio(e.target.result);
+        files.forEach(async (file) => {
+            try {
+                // Use AudioMetadataExtractor to get comprehensive metadata
+                const metadata = await AudioMetadataExtractor.extractMetadata(file);
                 
-                tempAudio.onloadedmetadata = function() {
-                    // Create track object with basic info
-                    const trackData = {
-                        id: tracks.length + newTracks.length,
-                        name: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
-                        artist: 'Unknown Artist',
-                        album: 'Unknown Album',
-                        duration: tempAudio.duration,
-                        url: e.target.result,
-                        fileType: file.type
-                    };
-                    
-                    // Try to extract artist and title from filename
-                    extractMetadataFromFilename(trackData);
-                    
-                    // Add to new tracks array
-                    newTracks.push(trackData);
-                    metadataExtracted++;
-                    
-                    // Check if all metadata has been extracted
-                    if (metadataExtracted === files.length) {
-                        finishLoadingTracks(newTracks);
-                    }
+                // Create track object with extracted metadata
+                const trackData = {
+                    id: tracks.length + newTracks.length,
+                    name: metadata.name,
+                    artist: metadata.artist,
+                    album: metadata.album,
+                    genre: metadata.genre,
+                    year: metadata.year,
+                    duration: metadata.duration,
+                    coverArt: metadata.coverArt,
+                    fileType: metadata.fileType,
+                    url: await AudioMetadataExtractor.fileToDataURL(file)
                 };
                 
-                tempAudio.onerror = function() {
-                    loadedCount++;
-                    metadataExtracted++;
-                    uploadStatus.textContent = `Error loading file: ${file.name}`;
-                    
-                    // Check if all files have been processed
-                    if (metadataExtracted === files.length) {
-                        finishLoadingTracks(newTracks);
-                    }
-                };
-            };
-            
-            reader.readAsDataURL(file);
+                // Add to new tracks array
+                newTracks.push(trackData);
+                
+                // Check if all files have been processed
+                processedCount++;
+                if (processedCount === files.length) {
+                    finishLoadingTracks(newTracks);
+                }
+            } catch (error) {
+                console.error('Error processing file:', error);
+                processedCount++;
+                
+                // Check if all files have been processed
+                if (processedCount === files.length) {
+                    finishLoadingTracks(newTracks);
+                }
+            }
         });
-    }
-    
-    // Helper function to extract metadata from filename
-    function extractMetadataFromFilename(trackData) {
-        // Try to match "Artist - Title" pattern
-        const nameParts = trackData.name.split(' - ');
-        if (nameParts.length > 1) {
-            trackData.artist = nameParts[0];
-            trackData.name = nameParts.slice(1).join(' - ');
-        }
-        
-        // Try to extract album from folder structure (if available)
-        // This would need file path info which isn't available in browser
-        
-        return trackData;
     }
     
     // Helper function to finish loading tracks
@@ -243,18 +226,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     }
     
-    // Add track to UI (mostly from your existing code)
+    // Add track to UI with support for cover art
     function addTrackToUI(trackData) {
         const trackItem = document.createElement('div');
         trackItem.className = 'track-item';
         trackItem.dataset.id = trackData.id;
         
-        // Format duration
-        const formattedDuration = AudioEngine.formatTime(trackData.duration);
+        // Format duration using the AudioMetadataExtractor utility
+        const formattedDuration = AudioMetadataExtractor.formatDuration(trackData.duration);
+        
+        // Prepare cover art HTML if available
+        let coverHTML = '';
+        if (trackData.coverArt) {
+            coverHTML = `<img src="${trackData.coverArt}" class="track-cover-img" alt="Cover">`;
+        }
         
         trackItem.innerHTML = `
             <div class="track-number">${trackData.id + 1}</div>
-            <div class="track-cover"></div>
+            <div class="track-cover">${coverHTML}</div>
             <div class="track-info">
                 <span class="track-name">${trackData.name}</span>
                 <span class="artist-name">${trackData.artist}</span>
