@@ -10,6 +10,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const musicLibrary = document.getElementById('music-library');
     const likeBtn = document.querySelector('.like-btn');
     const likeIcon = likeBtn.querySelector('i');
+
+    // Add a function to load the last folder used
+async function loadLastUsedFolder() {
+    try {
+      const lastFolder = await window.electron.getLastMusicFolder();
+      if (lastFolder) {
+        uploadStatus.textContent = `Loading music from last used folder: ${path.basename(lastFolder)}`;
+        const files = await window.electron.scanMusicFolder(lastFolder);
+        if (files.length > 0) {
+          processAudioFiles(files);
+        } else {
+          uploadStatus.textContent = 'No music files found in the last folder.';
+        }
+      }
+    } catch (error) {
+      console.error('Error loading last folder:', error);
+    }
+  }
+  
+  // Call this function when the application starts
+  loadLastUsedFolder();
     
     // Player Controls
     const audioElement = document.getElementById('audio-player');
