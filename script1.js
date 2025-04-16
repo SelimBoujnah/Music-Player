@@ -412,5 +412,5 @@ async function loadLastUsedFolder() {
                 }
                 break;
         }
-    });
+      });
 });
