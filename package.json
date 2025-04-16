@@ -1,21 +1,38 @@
 {
-  "name": "music-player",
+  "name": "electron-music-player",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Music Player Desktop Application",
+  "main": "main.js",
   "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "electron": "^35.1.4",
-    "electron-store": "^10.0.1",
-    "howler": "^2.2.4",
-    "music-metadata": "^11.0.5"
-  },
+  "keywords": [
+    "electron",
+    "music",
+    "player"
+  ],
+  "author": "Your Team",
+  "license": "MIT",
   "devDependencies": {
-    "electron-builder": "^26.0.12"
+    "electron": "^28.1.0",
+    "electron-builder": "^24.6.4"
+  },
+  "build": {
+    "appId": "com.yourteam.musicplayer",
+    "productName": "Music Player",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }
