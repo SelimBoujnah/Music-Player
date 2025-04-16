@@ -1,6 +1,7 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const store = require( 'electron-store');
 
 // Keep a global reference of the window object to prevent garbage collection
 let mainWindow;
@@ -65,4 +66,26 @@ ipcMain.handle('open-file-dialog', async () => {
     return fileData;
   }
   return [];
+
+// Create persistent storage for app settings
+const userPreferences = new store();
+
+
+// Handle folder selection and save to preferences
+ipcMain.handle('select-music-folder', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory']
+  });
+  
+  if (!result.canceled) {
+    userPreferences.set('lastMusicFolder', result.filePaths[0]);
+    return result.filePaths[0];
+  }
+  return null;
+});
+
+// Handler to get the last used folder
+ipcMain.handle('get-last-music-folder', () => {
+  return userPreferences.get('lastMusicFolder', null);
+});
 });
