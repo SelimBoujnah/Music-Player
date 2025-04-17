@@ -19,7 +19,7 @@ function createWindow() {
   });
 
   // Load the index.html of the app
-  mainWindow.loadFile('index.html');
+  mainWindow.loadFile('index1.html');
   
   // Open the DevTools in development (comment out for production)
   // mainWindow.webContents.openDevTools();
@@ -89,3 +89,5 @@ ipcMain.handle('get-last-music-folder', () => {
   return userPreferences.get('lastMusicFolder', null);
 });
 });
+
+
