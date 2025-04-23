@@ -3,9 +3,9 @@ const path = require('path');
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
-contextBridge.exposeInMainWorld(
-  'electron', {
-    getLastMusicFolder: () => ipcRenderer.invoke('get-last-music-folder'),
+contextBridge.exposeInMainWorld('electron', {
+  updateProgress: (progress) => ipcRenderer.send('update-progress', progress),
+  getLastMusicFolder: () => ipcRenderer.invoke('get-last-music-folder'),
     selectMusicFolder: () => ipcRenderer.invoke('select-music-folder'),
     scanMusicFolder: (folder) => ipcRenderer.invoke('scan-music-folder', folder),
     openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),

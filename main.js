@@ -138,6 +138,41 @@ ipcMain.handle('open-file-dialog', async () => {
 
   return [];
 
+
 });
 
+ipcMain.on('update-progress', (event, progress) => {
+  if (mainWindow) {
+    // Set progress on Windows taskbar
+    if (process.platform === 'win32') {
+      mainWindow.setProgressBar(progress);
+    }
+    // For macOS progress is shown in dock
+    else if (process.platform === 'darwin') {
+      app.dock.setProgressBar(progress);
+    }
+  }
+});
+
+
+
+
+app.whenReady().then(() => {
+
+  // Media key support
+  app.on('media-control', (event, mediaAction) => {
+    switch (mediaAction) {
+      case 'play':
+      case 'pause':
+        mainWindow.webContents.send('toggle-play');
+        break;
+      case 'nexttrack':
+        mainWindow.webContents.send('next-track');
+        break;
+      case 'previoustrack':
+        mainWindow.webContents.send('prev-track');
+        break;
+    }
+  });
+});
 

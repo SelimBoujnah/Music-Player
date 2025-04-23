@@ -120,6 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize audio engine
     const audioEngine = new AudioEngine();
     audioEngine.init(audioElement);
+    
 
     audioEngine.onPlayStateChange = function(isPlaying) {
         // Initialize visualizer if playing 
@@ -161,6 +162,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Set up audio engine callbacks
     audioEngine.onTimeUpdate = function(data) {
+         // Send progress to main process for taskbar/dock
+  if (window.electron && typeof window.electron.updateProgress === 'function') {
+    window.electron.updateProgress(data.progress / 100);
+  }
         // Update progress bar
         progressFill.style.width = `${data.progress}%`;
         
@@ -172,6 +177,59 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     audioEngine.onTrackChange = function(track, index) {
+
+audioEngine.onTrackChange = function(track, index) {
+    // Existing code...
+    
+    // Send notification on track change
+    if (track.name && "Notification" in window) {
+      // Check if we need to request permission
+      if (Notification.permission === "granted") {
+        sendTrackNotification(track);
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            sendTrackNotification(track);
+          }
+        });
+      }
+    }
+  };
+  
+  // Helper function for notifications
+  function sendTrackNotification(track) {
+    const options = {
+      body: `Artist: ${track.artist}`,
+      icon: track.coverArt || 'path/to/default-icon.png',
+      silent: true // Don't play sound with notification
+    };
+    
+    const notification = new Notification(`Now Playing: ${track.name}`, options);
+    
+    // Close notification after 5 seconds
+    setTimeout(() => notification.close(), 5000);
+  }
+  
+  // For Electron, you should use the native notification API
+  // Add this to main.js and call via IPC from renderer
+  function showTrackNotification(track) {
+    const notification = new Notification({
+      title: 'Now Playing',
+      body: `${track.name} - ${track.artist}`,
+      icon: track.coverArt || path.join(__dirname, 'icon.png'),
+      silent: true
+    });
+    
+    notification.show();
+    
+    // Auto close after 5 seconds
+    setTimeout(() => notification.close(), 5000);
+  }
+
+
+
+
+
         // Update UI
         currentTrackName.textContent = track.name;
         currentTrackArtist.textContent = track.artist;
