@@ -1,5 +1,8 @@
+
+
 // Music Player Integration with Enhanced Metadata Extraction
 document.addEventListener('DOMContentLoaded', function() {
+    
     // DOM Elements (using your existing selectors)
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
     const body = document.body;
@@ -10,27 +13,55 @@ document.addEventListener('DOMContentLoaded', function() {
     const musicLibrary = document.getElementById('music-library');
     const likeBtn = document.querySelector('.like-btn');
     const likeIcon = likeBtn.querySelector('i');
+    
+    // Add a canvas for the visualizer
+    const visualizerContainer = document.createElement('div');
+    visualizerContainer.id = 'visualizer-container';
+    visualizerContainer.classList.add('visualizer-container');
+    
+    let visualizerCanvas = null;
+    visualizerCanvas = document.createElement('canvas');
+    visualizerCanvas.id = 'audio-visualizer';
+    visualizerCanvas.classList.add('audio-visualizer');
+
+
+ 
+    visualizerContainer.appendChild(visualizerCanvas);
+
+    
+    
+    // Insert the visualizer container into the player controls after the controls
+    const playerControls = document.querySelector('.player-controls');
+    const playerRight = document.querySelector('.player-right')
+    //playerControls.appendChild(visualizerContainer);
+    playerControls.insertBefore(visualizerContainer, playerRight)
 
     // Add a function to load the last folder used
-async function loadLastUsedFolder() {
-    try {
-      const lastFolder = await window.electron.getLastMusicFolder();
-      if (lastFolder) {
-        uploadStatus.textContent = `Loading music from last used folder: ${path.basename(lastFolder)}`;
-        const files = await window.electron.scanMusicFolder(lastFolder);
-        if (files.length > 0) {
-          processAudioFiles(files);
-        } else {
-          uploadStatus.textContent = 'No music files found in the last folder.';
+    async function loadLastUsedFolder() {
+        if (!window.electron || typeof window.electron.getLastMusicFolder !== 'function') {
+            console.warn('Electron API not available — skipping loadLastUsedFolder');
+            return;
         }
-      }
-    } catch (error) {
-      console.error('Error loading last folder:', error);
+    
+        try {
+            const lastFolder = await window.electron.getLastMusicFolder();
+            if (lastFolder) {
+                uploadStatus.textContent = `Loading music from last used folder: ${path.basename(lastFolder)}`;
+                const files = await window.electron.scanMusicFolder(lastFolder);
+                if (files.length > 0) {
+                    processAudioFiles(files);
+                } else {
+                    uploadStatus.textContent = 'No music files found in the last folder.';
+                }
+            }
+        } catch (error) {
+            console.error('Error loading last folder:', error);
+        }
     }
-  }
-  
-  // Call this function when the application starts
-  loadLastUsedFolder();
+    
+    
+    // Call this function when the application starts
+    loadLastUsedFolder();
     
     // Player Controls
     const audioElement = document.getElementById('audio-player');
@@ -55,10 +86,78 @@ async function loadLastUsedFolder() {
     // State
     let isLiked = false;
     let tracks = [];
+
+    // Initialize audio visualizer
+    let audioVisualizer = null;
+    let audioContext = null;
+    let audioSource = null;
     
+     // Initialize the audio visualizer when we play a track
+
+     function initializeVisualizer() {
+        if (!audioContext) {
+            audioContext = audioEngine.audioContext;
+        }
+        
+        if (!audioSource) {
+            audioSource = audioEngine.audioSource;
+        }
+        
+        if (!audioVisualizer && audioSource) {
+            audioVisualizer = new AudioVisualizer(visualizerCanvas, audioContext, audioSource);
+            
+            // Initialize with waveform settings
+            audioVisualizer.barWidth = 2;
+            audioVisualizer.barGap = 1;
+            audioVisualizer.barColor = ' #cf1c12'; // red bars
+            audioVisualizer.backgroundColor = 'transparent'; //transparent background
+            
+            audioVisualizer.init();
+        }
+    }
+
+
     // Initialize audio engine
     const audioEngine = new AudioEngine();
     audioEngine.init(audioElement);
+
+    audioEngine.onPlayStateChange = function(isPlaying) {
+        // Initialize visualizer if playing 
+        if (isPlaying) {
+            // Resume audio context if suspended (browser requirement)
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            // Initialize visualizer if not already done
+            if (!audioVisualizer) {
+                initializeVisualizer();
+            }
+            
+            // Make sure visualizer is running when playing
+            if (audioVisualizer) {
+                audioVisualizer.start();
+                console.log("Visualizer started");
+            }
+        } else if (audioVisualizer) {
+            audioVisualizer.stop();
+            console.log("Visualizer stopped");
+        }
+        
+        // Update play button icon
+        if (isPlaying) {
+            playIcon.classList.remove('fa-play');
+            playIcon.classList.add('fa-pause');
+        } else {
+            playIcon.classList.remove('fa-pause');
+            playIcon.classList.add('fa-play');
+        }
+    };
+    
+    
+    
+   
+    
     
     // Set up audio engine callbacks
     audioEngine.onTimeUpdate = function(data) {
@@ -94,16 +193,7 @@ async function loadLastUsedFolder() {
         updateActiveTrack(index);
     };
     
-    audioEngine.onPlayStateChange = function(isPlaying) {
-        // Update play button icon
-        if (isPlaying) {
-            playIcon.classList.remove('fa-play');
-            playIcon.classList.add('fa-pause');
-        } else {
-            playIcon.classList.remove('fa-pause');
-            playIcon.classList.add('fa-play');
-        }
-    };
+  
     
     // Theme management (your existing code)
     const savedTheme = localStorage.getItem('theme');
@@ -169,7 +259,7 @@ async function loadLastUsedFolder() {
             uploadStatus.textContent = 'No valid audio files selected.';
             return;
         }
-        
+         
         // Process audio files
         processAudioFiles(audioFiles);
     });
@@ -228,7 +318,7 @@ async function loadLastUsedFolder() {
         // Add new tracks to the global tracks array
         tracks = [...tracks, ...newTracks];
         
-        // Add to UI
+        // Add to UI 
         newTracks.forEach(track => {
             addTrackToUI(track);
         });
@@ -412,5 +502,5 @@ async function loadLastUsedFolder() {
                 }
                 break;
         }
-      });
+    });
 });
