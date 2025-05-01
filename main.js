@@ -29,7 +29,7 @@ function createWindow() {
   mainWindow.loadFile('index1.html');
   
   // Open the DevTools in development (comment out for production)
-  mainWindow.webContents.openDevTools();
+  //mainWindow.webContents.openDevTools();
 
   
 
