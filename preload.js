@@ -15,5 +15,7 @@ contextBridge.exposeInMainWorld('electron', {
     onPrevTrack: (callback) => ipcRenderer.on('prev-track', () => callback()),
     // Path utilities
     basename: (filePath, ext) => path.basename(filePath, ext)
+
+    
   }
 );
