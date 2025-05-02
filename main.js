@@ -1,19 +1,18 @@
-const { app, BrowserWindow, dialog, ipcMain, Tray, Menu, nativeImage  } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const ElectronStore = require( 'electron-store').default;
+const ElectronStore = require('electron-store').default;
 const userPreferences = new ElectronStore();
 
 // Keep a global reference of the window object to prevent garbage collection
 let mainWindow;
-let tray = null
+let tray = null;
 
 const base64Icon = nativeImage.createFromDataURL(
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII='
-)
+);
 
 function createWindow() {
-
   // Create the browser window
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -29,9 +28,7 @@ function createWindow() {
   mainWindow.loadFile('index1.html');
   
   // Open the DevTools in development (comment out for production)
-  //mainWindow.webContents.openDevTools();
-
-  
+  // mainWindow.webContents.openDevTools();
 
   // Emitted when the window is closed
   mainWindow.on('closed', function () {
@@ -42,7 +39,6 @@ function createWindow() {
 // Create window when Electron is ready
 app.whenReady().then(() => {
   createWindow();
-
 
   // Tray Setup 
   tray = new Tray(base64Icon);
@@ -56,7 +52,6 @@ app.whenReady().then(() => {
   tray.setToolTip('Music Player');
   tray.setContextMenu(contextMenu);
 
-  
   app.on('activate', function () {
     // On macOS it's common to re-create a window when the dock icon is clicked
     if (mainWindow === null) createWindow();
@@ -68,9 +63,7 @@ app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
 
-
-
-
+// ===== FOLDER MANAGEMENT HANDLERS =====
 // Handle folder selection and save to preferences
 ipcMain.handle('select-music-folder', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
@@ -89,6 +82,17 @@ ipcMain.handle('get-last-music-folder', () => {
   return userPreferences.get('lastMusicFolder', null);
 });
 
+// Save folders to preferences
+ipcMain.handle('save-folders', (event, folders) => {
+  userPreferences.set('musicFolders', folders);
+  return true;
+});
+
+// Get saved folders from preferences
+ipcMain.handle('get-saved-folders', () => {
+  return userPreferences.get('musicFolders', ['root']); // Default to 'root' folder
+});
+
 // Handle scanning a music folder for audio files
 ipcMain.handle('scan-music-folder', async (event, folder) => {
   if (!folder) return [];
@@ -104,7 +108,8 @@ ipcMain.handle('scan-music-folder', async (event, folder) => {
       const filePath = path.join(folder, file);
       return {
         path: filePath,
-        name: path.basename(file, path.extname(file))
+        name: path.basename(file, path.extname(file)),
+        folder: path.basename(folder) // Include folder name in the response
       };
     });
   } catch (error) {
@@ -113,8 +118,7 @@ ipcMain.handle('scan-music-folder', async (event, folder) => {
   }
 });
 
-
-
+// ===== FILE MANAGEMENT HANDLERS =====
 // Handle file dialog open requests from renderer
 ipcMain.handle('open-file-dialog', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
@@ -137,10 +141,9 @@ ipcMain.handle('open-file-dialog', async () => {
   }
 
   return [];
-
-
 });
 
+// ===== PLAYBACK CONTROL HANDLERS =====
 ipcMain.on('update-progress', (event, progress) => {
   if (mainWindow) {
     // Set progress on Windows taskbar
@@ -154,11 +157,8 @@ ipcMain.on('update-progress', (event, progress) => {
   }
 });
 
-
-
-
+// ===== MEDIA KEY SUPPORT =====
 app.whenReady().then(() => {
-
   // Media key support
   app.on('media-control', (event, mediaAction) => {
     switch (mediaAction) {
@@ -174,7 +174,4 @@ app.whenReady().then(() => {
         break;
     }
   });
-
- 
 });
-

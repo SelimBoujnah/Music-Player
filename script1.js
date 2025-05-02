@@ -1,5 +1,3 @@
-
-
 // Music Player Integration with Enhanced Metadata Extraction
 document.addEventListener('DOMContentLoaded', function() {
     
@@ -24,17 +22,142 @@ document.addEventListener('DOMContentLoaded', function() {
     visualizerCanvas.id = 'audio-visualizer';
     visualizerCanvas.classList.add('audio-visualizer');
 
-
- 
     visualizerContainer.appendChild(visualizerCanvas);
-
-    
     
     // Insert the visualizer container into the player controls after the controls
     const playerControls = document.querySelector('.player-controls');
     const playerRight = document.querySelector('.player-right')
-    //playerControls.appendChild(visualizerContainer);
     playerControls.insertBefore(visualizerContainer, playerRight)
+
+    // State variables for folder management
+    let folders = ['root']; // 'root' is the default folder
+    let currentFolder = 'root';
+    let tracks = [];
+    let isLiked = false;
+
+    // Add folder management elements
+    const createFolderBtn = document.createElement('button');
+    createFolderBtn.id = 'create-folder-btn';
+    createFolderBtn.className = 'folder-btn';
+    createFolderBtn.innerHTML = '<i class="fas fa-folder-plus"></i> Create Folder';
+    
+    const selectFolderBtn = document.createElement('button');
+    selectFolderBtn.id = 'select-folder-btn';
+    selectFolderBtn.className = 'folder-btn';
+    selectFolderBtn.innerHTML = '<i class="fas fa-folder-open"></i> Select Folder';
+    
+    const folderSelect = document.createElement('select');
+    folderSelect.id = 'folder-select';
+    folderSelect.className = 'folder-select';
+    
+    const folderManagementDiv = document.createElement('div');
+    folderManagementDiv.className = 'folder-management';
+    folderManagementDiv.appendChild(createFolderBtn);
+    folderManagementDiv.appendChild(selectFolderBtn);
+    folderManagementDiv.appendChild(folderSelect);
+    
+    // Insert folder management into upload section
+    const uploadContainer = document.querySelector('.upload-container');
+    uploadContainer.insertBefore(folderManagementDiv, uploadContainer.firstChild);
+
+    // Initialize folder dropdown
+    updateFolderDropdown();
+
+    // Folder management event listeners
+    createFolderBtn.addEventListener('click', createNewFolder);
+    selectFolderBtn.addEventListener('click', selectMusicFolder);
+    folderSelect.addEventListener('change', changeCurrentFolder);
+
+    // Load saved folders when app starts
+    if (window.electron) {
+        window.electron.getSavedFolders().then(savedFolders => {
+            if (savedFolders && savedFolders.length > 0) {
+                folders = savedFolders;
+                updateFolderDropdown();
+            }
+        });
+    }
+
+    // Folder management functions
+    async function createNewFolder() {
+        const folderName = prompt('Enter folder name:');
+        if (!folderName) return;
+        
+        if (folders.includes(folderName)) {
+            alert('Folder already exists!');
+            return;
+        }
+        
+        folders.push(folderName);
+        updateFolderDropdown();
+        
+        // Save folders to storage if using Electron
+        if (window.electron) {
+            try {
+                await window.electron.saveFolders(folders);
+            } catch (error) {
+                console.error('Error saving folders:', error);
+            }
+        }
+    }
+
+    async function selectMusicFolder() {
+        if (!window.electron) {
+            alert('Folder selection only available in Electron app');
+            return;
+        }
+        
+        try {
+            const folderPath = await window.electron.selectMusicFolder();
+            if (folderPath) {
+                uploadStatus.textContent = `Selected folder: ${path.basename(folderPath)}`;
+                
+                // Scan the folder for music files
+                const files = await window.electron.scanMusicFolder(folderPath);
+                if (files.length > 0) {
+                    processAudioFiles(files);
+                } else {
+                    uploadStatus.textContent = 'No music files found in selected folder.';
+                }
+            }
+        } catch (error) {
+            console.error('Error selecting folder:', error);
+            uploadStatus.textContent = 'Error selecting folder';
+        }
+    }
+
+    function changeCurrentFolder() {
+        currentFolder = folderSelect.value;
+        filterTracksByFolder();
+    }
+
+    function updateFolderDropdown() {
+        folderSelect.innerHTML = '';
+        
+        folders.forEach(folder => {
+            const option = document.createElement('option');
+            option.value = folder;
+            option.textContent = folder === 'root' ? 'Main Library' : folder;
+            folderSelect.appendChild(option);
+        });
+        
+        folderSelect.value = currentFolder;
+    }
+
+    function filterTracksByFolder() {
+        musicLibrary.innerHTML = '';
+        
+        const filteredTracks = tracks.filter(track => track.folder === currentFolder);
+        
+        if (filteredTracks.length === 0) {
+            const noTracksMsg = document.createElement('div');
+            noTracksMsg.className = 'no-tracks-message';
+            noTracksMsg.textContent = 'No tracks in this folder';
+            musicLibrary.appendChild(noTracksMsg);
+        } else {
+            filteredTracks.forEach(track => addTrackToUI(track));
+        }
+    }
 
     // Add a function to load the last folder used
     async function loadLastUsedFolder() {
@@ -59,7 +182,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    
     // Call this function when the application starts
     loadLastUsedFolder();
     
@@ -83,17 +205,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentTrackArtist = document.getElementById('current-track-artist');
     const currentTrackCover = document.getElementById('current-track-cover');
     
-    // State
-    let isLiked = false;
-    let tracks = [];
-
     // Initialize audio visualizer
     let audioVisualizer = null;
     let audioContext = null;
     let audioSource = null;
     
      // Initialize the audio visualizer when we play a track
-
      function initializeVisualizer() {
         if (!audioContext) {
             audioContext = audioEngine.audioContext;
@@ -115,7 +232,6 @@ document.addEventListener('DOMContentLoaded', function() {
             audioVisualizer.init();
         }
     }
-
 
     // Initialize audio engine
     const audioEngine = new AudioEngine();
@@ -155,17 +271,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
-    
-    
-   
-    
-    
     // Set up audio engine callbacks
     audioEngine.onTimeUpdate = function(data) {
          // Send progress to main process for taskbar/dock
-  if (window.electron && typeof window.electron.updateProgress === 'function') {
-    window.electron.updateProgress(data.progress / 100);
-  }
+        if (window.electron && typeof window.electron.updateProgress === 'function') {
+            window.electron.updateProgress(data.progress / 100);
+        }
         // Update progress bar
         progressFill.style.width = `${data.progress}%`;
         
@@ -177,58 +288,19 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     audioEngine.onTrackChange = function(track, index) {
-
-audioEngine.onTrackChange = function(track, index) {
-    // Existing code...
-    
-    // Send notification on track change
-    if (track.name && "Notification" in window) {
-      // Check if we need to request permission
-      if (Notification.permission === "granted") {
-        sendTrackNotification(track);
-      } else if (Notification.permission !== "denied") {
-        Notification.requestPermission().then(permission => {
-          if (permission === "granted") {
-            sendTrackNotification(track);
-          }
-        });
-      }
-    }
-  };
-  
-  // Helper function for notifications
-  function sendTrackNotification(track) {
-    const options = {
-      body: `Artist: ${track.artist}`,
-      icon: track.coverArt || 'path/to/default-icon.png',
-      silent: true // Don't play sound with notification
-    };
-    
-    const notification = new Notification(`Now Playing: ${track.name}`, options);
-    
-    // Close notification after 5 seconds
-    setTimeout(() => notification.close(), 5000);
-  }
-  
-  // For Electron, you should use the native notification API
-  // Add this to main.js and call via IPC from renderer
-  function showTrackNotification(track) {
-    const notification = new Notification({
-      title: 'Now Playing',
-      body: `${track.name} - ${track.artist}`,
-      icon: track.coverArt || path.join(__dirname, 'icon.png'),
-      silent: true
-    });
-    
-    notification.show();
-    
-    // Auto close after 5 seconds
-    setTimeout(() => notification.close(), 5000);
-  }
-
-
-
-
+        // Send notification on track change
+        if (track.name && "Notification" in window) {
+            // Check if we need to request permission
+            if (Notification.permission === "granted") {
+                sendTrackNotification(track);
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        sendTrackNotification(track);
+                    }
+                });
+            }
+        }
 
         // Update UI
         currentTrackName.textContent = track.name;
@@ -250,8 +322,20 @@ audioEngine.onTrackChange = function(track, index) {
         // Update active track in list
         updateActiveTrack(index);
     };
-    
   
+    // Helper function for notifications
+    function sendTrackNotification(track) {
+        const options = {
+            body: `Artist: ${track.artist}`,
+            icon: track.coverArt || 'path/to/default-icon.png',
+            silent: true // Don't play sound with notification
+        };
+        
+        const notification = new Notification(`Now Playing: ${track.name}`, options);
+        
+        // Close notification after 5 seconds
+        setTimeout(() => notification.close(), 5000);
+    }
     
     // Theme management (your existing code)
     const savedTheme = localStorage.getItem('theme');
@@ -348,7 +432,8 @@ audioEngine.onTrackChange = function(track, index) {
                     duration: metadata.duration,
                     coverArt: metadata.coverArt,
                     fileType: metadata.fileType,
-                    url: await AudioMetadataExtractor.fileToDataURL(file)
+                    url: await AudioMetadataExtractor.fileToDataURL(file),
+                    folder: currentFolder // Add folder property
                 };
                 
                 // Add to new tracks array
@@ -416,6 +501,8 @@ audioEngine.onTrackChange = function(track, index) {
             <div class="track-info">
                 <span class="track-name">${trackData.name}</span>
                 <span class="artist-name">${trackData.artist}</span>
+                ${trackData.folder && trackData.folder !== 'root' ? 
+                  `<span class="track-folder">Folder: ${trackData.folder}</span>` : ''}
             </div>
             <div class="track-album">${trackData.album}</div>
             <div class="track-duration">${formattedDuration}</div>
