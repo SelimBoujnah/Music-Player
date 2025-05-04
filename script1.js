@@ -562,3 +562,76 @@ audioEngine.onTrackChange = function(track, index) {
         }
     });
 });
+// Enhanced keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Only if we're not in an input field
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    
+    switch(e.key) {
+        // Play/Pause - Space bar
+        case ' ':
+            e.preventDefault(); // Prevent page scrolling
+            if (tracks.length > 0) audioEngine.togglePlay();
+            break;
+            
+        // Stop - 's' key
+        case 's':
+            e.preventDefault();
+            if (tracks.length > 0) {
+                audioEngine.stop();
+                // Update play button icon
+                playIcon.classList.remove('fa-pause');
+                playIcon.classList.add('fa-play');
+            }
+            break;
+            
+        // Next track - Right arrow or 'n'
+        case 'ArrowRight':
+        case 'n':
+            e.preventDefault();
+            audioEngine.next();
+            break;
+            
+        // Previous track - Left arrow or 'p'
+        case 'ArrowLeft':
+        case 'p':
+            e.preventDefault();
+            audioEngine.previous();
+            break;
+            
+        // Volume up - Up arrow
+        case 'ArrowUp':
+            e.preventDefault();
+            // Increase volume by 10%
+            let newVolumeUp = Math.min(1, audioEngine.volume + 0.1);
+            audioEngine.setVolume(newVolumeUp);
+            volumeFill.style.width = `${newVolumeUp * 100}%`;
+            updateVolumeIcon(newVolumeUp);
+            break;
+            
+        // Volume down - Down arrow
+        case 'ArrowDown':
+            e.preventDefault();
+            // Decrease volume by 10%
+            let newVolumeDown = Math.max(0, audioEngine.volume - 0.1);
+            audioEngine.setVolume(newVolumeDown);
+            volumeFill.style.width = `${newVolumeDown * 100}%`;
+            updateVolumeIcon(newVolumeDown);
+            break;
+            
+        // Mute/Unmute - 'm'
+        case 'm':
+            e.preventDefault();
+            if (audioEngine.volume > 0) {
+                previousVolume = audioEngine.volume;
+                audioEngine.setVolume(0);
+                volumeFill.style.width = '0%';
+                volumeIcon.className = 'fas fa-volume-mute';
+            } else {
+                audioEngine.setVolume(previousVolume);
+                volumeFill.style.width = `${previousVolume * 100}%`;
+                updateVolumeIcon(previousVolume);
+            }
+            break;
+    }
+});
