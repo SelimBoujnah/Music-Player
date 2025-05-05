@@ -1,16 +1,27 @@
-// Music Player Integration with Enhanced Metadata Extraction
-document.addEventListener('DOMContentLoaded', function() {
+// Enhanced script1.js with fixed electron integration
+
+window.addEventListener('DOMContentLoaded',async function() {
+    console.log('DOM Content Loaded');
     
-    // DOM Elements (using your existing selectors)
+    // Check if we're running in Electron or browser
+    const isElectron = typeof process !== 'undefined' && process.versions && process.versions.electron;
+    console.log('Running in Electron:', isElectron);
+    
+    // DOM Elements
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
     const body = document.body;
     const uploadMusicBtn = document.getElementById('upload-music');
     const uploadSection = document.getElementById('upload-section');
     const fileInput = document.getElementById('file-input');
+    fileInput.setAttribute('webkitdirectory', '');
+    fileInput.setAttribute('directory', '');
+    fileInput.setAttribute('multiple', '');
+    const libraryBtn = document.getElementById('library-section')
     const uploadStatus = document.getElementById('upload-status');
     const musicLibrary = document.getElementById('music-library');
     const likeBtn = document.querySelector('.like-btn');
     const likeIcon = likeBtn.querySelector('i');
+    const featuredContent = document.querySelector('.featured-content')
     
     // Add a canvas for the visualizer
     const visualizerContainer = document.createElement('div');
@@ -35,155 +46,36 @@ document.addEventListener('DOMContentLoaded', function() {
     let tracks = [];
     let isLiked = false;
 
-    // Add folder management elements
-    const createFolderBtn = document.createElement('button');
-    createFolderBtn.id = 'create-folder-btn';
-    createFolderBtn.className = 'folder-btn';
-    createFolderBtn.innerHTML = '<i class="fas fa-folder-plus"></i> Create Folder';
+
+
+  
     
-    const selectFolderBtn = document.createElement('button');
-    selectFolderBtn.id = 'select-folder-btn';
-    selectFolderBtn.className = 'folder-btn';
-    selectFolderBtn.innerHTML = '<i class="fas fa-folder-open"></i> Select Folder';
     
-    const folderSelect = document.createElement('select');
-    folderSelect.id = 'folder-select';
-    folderSelect.className = 'folder-select';
-    
-    const folderManagementDiv = document.createElement('div');
-    folderManagementDiv.className = 'folder-management';
-    folderManagementDiv.appendChild(createFolderBtn);
-    folderManagementDiv.appendChild(selectFolderBtn);
-    folderManagementDiv.appendChild(folderSelect);
-    
-    // Insert folder management into upload section
-    const uploadContainer = document.querySelector('.upload-container');
-    uploadContainer.insertBefore(folderManagementDiv, uploadContainer.firstChild);
-
-    // Initialize folder dropdown
-    updateFolderDropdown();
-
-    // Folder management event listeners
-    createFolderBtn.addEventListener('click', createNewFolder);
-    selectFolderBtn.addEventListener('click', selectMusicFolder);
-    folderSelect.addEventListener('change', changeCurrentFolder);
-
-    // Load saved folders when app starts
-    if (window.electron) {
-        window.electron.getSavedFolders().then(savedFolders => {
-            if (savedFolders && savedFolders.length > 0) {
-                folders = savedFolders;
-                updateFolderDropdown();
-            }
-        });
-    }
-
-    // Folder management functions
-    async function createNewFolder() {
-        const folderName = prompt('Enter folder name:');
-        if (!folderName) return;
-        
-        if (folders.includes(folderName)) {
-            alert('Folder already exists!');
-            return;
-        }
-        
-        folders.push(folderName);
-        updateFolderDropdown();
-        
-        // Save folders to storage if using Electron
-        if (window.electron) {
-            try {
-                await window.electron.saveFolders(folders);
-            } catch (error) {
-                console.error('Error saving folders:', error);
-            }
-        }
-    }
-
-    async function selectMusicFolder() {
-        if (!window.electron) {
-            alert('Folder selection only available in Electron app');
-            return;
-        }
-        
-        try {
-            const folderPath = await window.electron.selectMusicFolder();
-            if (folderPath) {
-                uploadStatus.textContent = `Selected folder: ${path.basename(folderPath)}`;
-                
-                // Scan the folder for music files
-                const files = await window.electron.scanMusicFolder(folderPath);
-                if (files.length > 0) {
-                    processAudioFiles(files);
-                } else {
-                    uploadStatus.textContent = 'No music files found in selected folder.';
-                }
-            }
-        } catch (error) {
-            console.error('Error selecting folder:', error);
-            uploadStatus.textContent = 'Error selecting folder';
-        }
-    }
-
-    function changeCurrentFolder() {
-        currentFolder = folderSelect.value;
-        filterTracksByFolder();
-    }
-
-    function updateFolderDropdown() {
-        folderSelect.innerHTML = '';
-        
-        folders.forEach(folder => {
-            const option = document.createElement('option');
-            option.value = folder;
-            option.textContent = folder === 'root' ? 'Main Library' : folder;
-            folderSelect.appendChild(option);
-        });
-        
-        folderSelect.value = currentFolder;
-    }
-
-    function filterTracksByFolder() {
-        musicLibrary.innerHTML = '';
-        
-        const filteredTracks = tracks.filter(track => track.folder === currentFolder);
-        
-        if (filteredTracks.length === 0) {
-            const noTracksMsg = document.createElement('div');
-            noTracksMsg.className = 'no-tracks-message';
-            noTracksMsg.textContent = 'No tracks in this folder';
-            musicLibrary.appendChild(noTracksMsg);
-        } else {
-            filteredTracks.forEach(track => addTrackToUI(track));
-        }
-    }
-
-    // Add a function to load the last folder used
-    async function loadLastUsedFolder() {
-        if (!window.electron || typeof window.electron.getLastMusicFolder !== 'function') {
-            console.warn('Electron API not available — skipping loadLastUsedFolder');
-            return;
-        }
-    
-        try {
-            const lastFolder = await window.electron.getLastMusicFolder();
+    // Call on app launch with checks to prevent errors
+   
+function safeLoadLastUsedFolder() {
+    // Only try to load last folder if we're in Electron
+    if (isElectron && typeof window.electron.getLastMusicFolder === 'function') {
+        window.electron.getLastMusicFolder().then(lastFolder => {
             if (lastFolder) {
-                uploadStatus.textContent = `Loading music from last used folder: ${path.basename(lastFolder)}`;
-                const files = await window.electron.scanMusicFolder(lastFolder);
-                if (files.length > 0) {
-                    processAudioFiles(files);
-                } else {
-                    uploadStatus.textContent = 'No music files found in the last folder.';
-                }
+                // Last folder exists, load it
+                loadLastUsedFolder();
+            } else {
+                // No last folder, prompt user to select one
+                selectMusicFolder();
             }
-        } catch (error) {
-            console.error('Error loading last folder:', error);
-        }
+        }).catch(error => {
+            console.error('Error checking last folder:', error);
+            // If there's an error, prompt user to select a folder
+            selectMusicFolder();
+        });
+    } else {
+        console.log('Not running in Electron or getLastMusicFolder not available - skipping folder loading');
     }
+}
     
-    // Call this function when the application starts
-    loadLastUsedFolder();
+    // Run after a short delay to ensure DOM and Electron APIs are fully loaded
+    setTimeout(safeLoadLastUsedFolder, 500);
     
     // Player Controls
     const audioElement = document.getElementById('audio-player');
@@ -212,132 +104,156 @@ document.addEventListener('DOMContentLoaded', function() {
     
      // Initialize the audio visualizer when we play a track
      function initializeVisualizer() {
-        if (!audioContext) {
+        // Make sure AudioEngine exists before trying to use it
+        if (typeof AudioEngine !== 'function') {
+            console.error('AudioEngine not defined');
+            return;
+        }
+        
+        if (!audioContext && audioEngine && audioEngine.audioContext) {
             audioContext = audioEngine.audioContext;
         }
         
-        if (!audioSource) {
+        if (!audioSource && audioEngine && audioEngine.audioSource) {
             audioSource = audioEngine.audioSource;
         }
         
-        if (!audioVisualizer && audioSource) {
-            audioVisualizer = new AudioVisualizer(visualizerCanvas, audioContext, audioSource);
-            
-            // Initialize with waveform settings
-            audioVisualizer.barWidth = 2;
-            audioVisualizer.barGap = 1;
-            audioVisualizer.barColor = ' #cf1c12'; // red bars
-            audioVisualizer.backgroundColor = 'transparent'; //transparent background
-            
-            audioVisualizer.init();
+        if (!audioVisualizer && audioSource && typeof AudioVisualizer === 'function') {
+            try {
+                audioVisualizer = new AudioVisualizer(visualizerCanvas, audioContext, audioSource);
+                
+                // Initialize with waveform settings
+                audioVisualizer.barWidth = 2;
+                audioVisualizer.barGap = 1;
+                audioVisualizer.barColor = ' #cf1c12'; // red bars
+                audioVisualizer.backgroundColor = 'transparent'; //transparent background
+                
+                audioVisualizer.init();
+            } catch (error) {
+                console.error('Error initializing audio visualizer:', error);
+            }
         }
     }
 
-    // Initialize audio engine
-    const audioEngine = new AudioEngine();
-    audioEngine.init(audioElement);
-    
-
-    audioEngine.onPlayStateChange = function(isPlaying) {
-        // Initialize visualizer if playing 
-        if (isPlaying) {
-            // Resume audio context if suspended (browser requirement)
-            if (audioContext && audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
+    // Initialize audio engine with error checking
+    let audioEngine = null;
+    try {
+        if (typeof AudioEngine === 'function') {
+            audioEngine = new AudioEngine();
+            audioEngine.init(audioElement);
             
-            // Initialize visualizer if not already done
-            if (!audioVisualizer) {
-                initializeVisualizer();
-            }
-            
-            // Make sure visualizer is running when playing
-            if (audioVisualizer) {
-                audioVisualizer.start();
-                console.log("Visualizer started");
-            }
-        } else if (audioVisualizer) {
-            audioVisualizer.stop();
-            console.log("Visualizer stopped");
-        }
-        
-        // Update play button icon
-        if (isPlaying) {
-            playIcon.classList.remove('fa-play');
-            playIcon.classList.add('fa-pause');
-        } else {
-            playIcon.classList.remove('fa-pause');
-            playIcon.classList.add('fa-play');
-        }
-    };
-    
-    // Set up audio engine callbacks
-    audioEngine.onTimeUpdate = function(data) {
-         // Send progress to main process for taskbar/dock
-        if (window.electron && typeof window.electron.updateProgress === 'function') {
-            window.electron.updateProgress(data.progress / 100);
-        }
-        // Update progress bar
-        progressFill.style.width = `${data.progress}%`;
-        
-        // Update time display
-        currentTimeDisplay.textContent = AudioEngine.formatTime(data.currentTime);
-        if (!isNaN(data.duration)) {
-            totalTimeDisplay.textContent = AudioEngine.formatTime(data.duration);
-        }
-    };
-    
-    audioEngine.onTrackChange = function(track, index) {
-        // Send notification on track change
-        if (track.name && "Notification" in window) {
-            // Check if we need to request permission
-            if (Notification.permission === "granted") {
-                sendTrackNotification(track);
-            } else if (Notification.permission !== "denied") {
-                Notification.requestPermission().then(permission => {
-                    if (permission === "granted") {
-                        sendTrackNotification(track);
+            audioEngine.onPlayStateChange = function(isPlaying) {
+                // Initialize visualizer if playing 
+                if (isPlaying) {
+                    // Resume audio context if suspended (browser requirement)
+                    if (audioContext && audioContext.state === 'suspended') {
+                        audioContext.resume();
                     }
-                });
-            }
-        }
+                    
+                    // Initialize visualizer if not already done
+                    if (!audioVisualizer) {
+                        initializeVisualizer();
+                    }
+                    
+                    // Make sure visualizer is running when playing
+                    if (audioVisualizer) {
+                        audioVisualizer.start();
+                        console.log("Visualizer started");
+                    }
+                } else if (audioVisualizer) {
+                    audioVisualizer.stop();
+                    console.log("Visualizer stopped");
+                }
+                
+                // Update play button icon
+                if (isPlaying) {
+                    playIcon.classList.remove('fa-play');
+                    playIcon.classList.add('fa-pause');
+                } else {
+                    playIcon.classList.remove('fa-pause');
+                    playIcon.classList.add('fa-play');
+                }
+            };
+            
+            // Set up audio engine callbacks
+            audioEngine.onTimeUpdate = function(data) {
+                // Send progress to main process for taskbar/dock
+                if (isElectron && typeof window.electron.updateProgress === 'function') {
+                    window.electron.updateProgress(data.progress / 100);
+                }
+                // Update progress bar
+                progressFill.style.width = `${data.progress}%`;
+                
+                // Update time display
+                currentTimeDisplay.textContent = AudioEngine.formatTime(data.currentTime);
+                if (!isNaN(data.duration)) {
+                    totalTimeDisplay.textContent = AudioEngine.formatTime(data.duration);
+                }
+            };
+            
+            audioEngine.onTrackChange = function(track, index) {
+                // Send notification on track change
+                if (track.name && "Notification" in window) {
+                    // Check if we need to request permission
+                    if (Notification.permission === "granted") {
+                        sendTrackNotification(track);
+                    } else if (Notification.permission !== "denied") {
+                        Notification.requestPermission().then(permission => {
+                            if (permission === "granted") {
+                                sendTrackNotification(track);
+                            }
+                        });
+                    }
+                }
 
-        // Update UI
-        currentTrackName.textContent = track.name;
-        currentTrackArtist.textContent = track.artist;
-        
-        // Update cover art if available (new feature from metadata extractor)
-        if (track.coverArt) {
-            currentTrackCover.innerHTML = `<img src="${track.coverArt}" alt="Album Cover">`;
+                // Update UI
+                currentTrackName.textContent = track.name || 'Unknown Track';
+                currentTrackArtist.textContent = track.artist || 'Unknown Artist';
+                
+                // Update cover art if available (new feature from metadata extractor)
+                if (track.coverArt) {
+                    currentTrackCover.innerHTML = `<img src="${track.coverArt}" alt="Album Cover">`;
+                } else {
+                    // Default placeholder
+                    currentTrackCover.innerHTML = `<div class="cover-placeholder"><i class="fas fa-music"></i></div>`;
+                }
+                
+                // Reset like button
+                isLiked = false;
+                likeIcon.classList.remove('fas');
+                likeIcon.classList.add('far');
+                
+                // Update active track in list
+                updateActiveTrack(index);
+            };
         } else {
-            // Default placeholder
-            currentTrackCover.innerHTML = `<div class="cover-placeholder"><i class="fas fa-music"></i></div>`;
+            console.error('AudioEngine class not available');
         }
-        
-        // Reset like button
-        isLiked = false;
-        likeIcon.classList.remove('fas');
-        likeIcon.classList.add('far');
-        
-        // Update active track in list
-        updateActiveTrack(index);
-    };
+    } catch (error) {
+        console.error('Failed to initialize audio engine:', error);
+    }
   
     // Helper function for notifications
     function sendTrackNotification(track) {
+        if (!("Notification" in window)) return;
+        
         const options = {
-            body: `Artist: ${track.artist}`,
+            body: `Artist: ${track.artist || 'Unknown Artist'}`,
             icon: track.coverArt || 'path/to/default-icon.png',
             silent: true // Don't play sound with notification
         };
         
-        const notification = new Notification(`Now Playing: ${track.name}`, options);
-        
-        // Close notification after 5 seconds
-        setTimeout(() => notification.close(), 5000);
+        try {
+            const notification = new Notification(`Now Playing: ${track.name || 'Unknown Track'}`, options);
+            
+            // Close notification after 5 seconds
+            setTimeout(() => notification.close(), 5000);
+        } catch (error) {
+            console.error('Error showing notification:', error);
+        }
     }
     
-    // Theme management (your existing code)
+    // Theme management
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         body.classList.add('dark-mode');
@@ -374,8 +290,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Upload music button
     uploadMusicBtn.addEventListener('click', function() {
-        // Toggle visibility of upload section
-        uploadSection.style.display = uploadSection.style.display === 'none' ? 'block' : 'none';
+        // update visibility of upload section
+        uploadSection.style.display = 'block';
+        featuredContent.style.display = 'none'
         
         // Update active state
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -383,31 +300,85 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         this.classList.add('active');
     });
+
+    //library music button
+    libraryBtn.addEventListener('click', function(){
+         // update visibility of library section
+         featuredContent.style.display = 'block'
+         uploadSection.style.display = 'none';
+         
+          // Update active state
+          document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        libraryBtn.classList.add('active');
+    });
+
     
     // File input change handler
+    // fileInput.addEventListener('change', function(e) {
+    //     const files = Array.from(e.target.files);
+    //     if (files.length === 0) return;
+        
+    //     uploadStatus.textContent = `Loading ${files.length} file(s)...`;
+        
+    //     // Filter for audio files
+    //     const audioFiles = files.filter(file => {
+    //         const validTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/flac', 'audio/mp4'];
+    //         return validTypes.includes(file.type);
+    //     });
+        
+    //     if (audioFiles.length === 0) {
+    //         uploadStatus.textContent = 'No valid audio files selected.';
+    //         return;
+    //     }
+         
+    //     // Process audio files
+    //     processAudioFiles(audioFiles);
+    // });
+    
+
     fileInput.addEventListener('change', function(e) {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
         
-        uploadStatus.textContent = `Loading ${files.length} file(s)...`;
+        uploadStatus.textContent = `Loading ${files.length} file(s) from folder...`;
         
         // Filter for audio files
         const audioFiles = files.filter(file => {
             const validTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/flac', 'audio/mp4'];
-            return validTypes.includes(file.type);
+            // For files without proper MIME types, check extension
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            const validExtensions = ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'wma'];
+            
+            return validTypes.includes(file.type) || validExtensions.includes(fileExtension);
         });
         
         if (audioFiles.length === 0) {
-            uploadStatus.textContent = 'No valid audio files selected.';
+            uploadStatus.textContent = 'No valid audio files found in the selected folder.';
             return;
+        }
+        
+        // Update status with folder name (get from first file's path)
+        if (audioFiles.length > 0 && audioFiles[0].webkitRelativePath) {
+            const folderPath = audioFiles[0].webkitRelativePath.split('/')[0];
+            uploadStatus.textContent = `Loading ${audioFiles.length} audio files from "${folderPath}"...`;
         }
          
         // Process audio files
         processAudioFiles(audioFiles);
     });
+
     
-    // Enhanced audio file processing using AudioMetadataExtractor
+    
+
+    // Enhanced audio file processing with error handling
     function processAudioFiles(files) {
+        if (!files || files.length === 0) {
+            console.warn('No files to process');
+            return;
+        }
+        
         // Clear existing library if this is first upload
         if (tracks.length === 0) {
             musicLibrary.innerHTML = '';
@@ -418,20 +389,26 @@ document.addEventListener('DOMContentLoaded', function() {
         
         files.forEach(async (file) => {
             try {
+                // Check if AudioMetadataExtractor exists
+                if (typeof AudioMetadataExtractor !== 'object') {
+                    console.error('AudioMetadataExtractor not available');
+                    throw new Error('Metadata extractor not available');
+                }
+                
                 // Use AudioMetadataExtractor to get comprehensive metadata
                 const metadata = await AudioMetadataExtractor.extractMetadata(file);
                 
                 // Create track object with extracted metadata
                 const trackData = {
                     id: tracks.length + newTracks.length,
-                    name: metadata.name,
-                    artist: metadata.artist,
-                    album: metadata.album,
-                    genre: metadata.genre,
-                    year: metadata.year,
-                    duration: metadata.duration,
-                    coverArt: metadata.coverArt,
-                    fileType: metadata.fileType,
+                    name: metadata.name || file.name || 'Unknown Track',
+                    artist: metadata.artist || 'Unknown Artist',
+                    album: metadata.album || 'Unknown Album',
+                    genre: metadata.genre || '',
+                    year: metadata.year || '',
+                    duration: metadata.duration || 0,
+                    coverArt: metadata.coverArt || null,
+                    fileType: metadata.fileType || file.type,
                     url: await AudioMetadataExtractor.fileToDataURL(file),
                     folder: currentFolder // Add folder property
                 };
@@ -446,6 +423,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } catch (error) {
                 console.error('Error processing file:', error);
+                
+                // Create a basic track entry even if metadata extraction fails
+                try {
+                    const basicTrackData = {
+                        id: tracks.length + newTracks.length,
+                        name: file.name || 'Unknown Track',
+                        artist: 'Unknown Artist',
+                        album: 'Unknown Album',
+                        duration: 0,
+                        url: URL.createObjectURL(file),
+                        folder: currentFolder
+                    };
+                    
+                    newTracks.push(basicTrackData);
+                } catch (fallbackError) {
+                    console.error('Failed to create basic track data:', fallbackError);
+                }
+                
                 processedCount++;
                 
                 // Check if all files have been processed
@@ -458,6 +453,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Helper function to finish loading tracks
     function finishLoadingTracks(newTracks) {
+        if (!newTracks || newTracks.length === 0) {
+            uploadStatus.textContent = 'No tracks could be loaded';
+            return;
+        }
+        
         // Add new tracks to the global tracks array
         tracks = [...tracks, ...newTracks];
         
@@ -466,12 +466,14 @@ document.addEventListener('DOMContentLoaded', function() {
             addTrackToUI(track);
         });
         
-        // Update audio engine
-        audioEngine.loadTracks(tracks);
-        
-        // Load first track if this is the first batch
-        if (tracks.length === newTracks.length) {
-            audioEngine.loadTrack(0);
+        // Update audio engine if it exists
+        if (audioEngine) {
+            audioEngine.loadTracks(tracks);
+            
+            // Load first track if this is the first batch
+            if (tracks.length === newTracks.length) {
+                audioEngine.loadTrack(0);
+            }
         }
         
         uploadStatus.textContent = `Successfully added ${newTracks.length} track(s)`;
@@ -482,12 +484,25 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add track to UI with support for cover art
     function addTrackToUI(trackData) {
+        if (!trackData) return;
+        
         const trackItem = document.createElement('div');
         trackItem.className = 'track-item';
         trackItem.dataset.id = trackData.id;
         
-        // Format duration using the AudioMetadataExtractor utility
-        const formattedDuration = AudioMetadataExtractor.formatDuration(trackData.duration);
+        // Format duration - use utility if available, otherwise fallback
+        let formattedDuration = '0:00';
+        if (trackData.duration) {
+            if (typeof AudioMetadataExtractor === 'object' && 
+                typeof AudioMetadataExtractor.formatDuration === 'function') {
+                formattedDuration = AudioMetadataExtractor.formatDuration(trackData.duration);
+            } else {
+                // Basic fallback formatter
+                const minutes = Math.floor(trackData.duration / 60);
+                const seconds = Math.floor(trackData.duration % 60).toString().padStart(2, '0');
+                formattedDuration = `${minutes}:${seconds}`;
+            }
+        }
         
         // Prepare cover art HTML if available
         let coverHTML = '';
@@ -499,18 +514,22 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="track-number">${trackData.id + 1}</div>
             <div class="track-cover">${coverHTML}</div>
             <div class="track-info">
-                <span class="track-name">${trackData.name}</span>
-                <span class="artist-name">${trackData.artist}</span>
+                <span class="track-name">${trackData.name || 'Unknown Track'}</span>
+                <span class="artist-name">${trackData.artist || 'Unknown Artist'}</span>
                 ${trackData.folder && trackData.folder !== 'root' ? 
                   `<span class="track-folder">Folder: ${trackData.folder}</span>` : ''}
             </div>
-            <div class="track-album">${trackData.album}</div>
+            <div class="track-album">${trackData.album || 'Unknown Album'}</div>
             <div class="track-duration">${formattedDuration}</div>
         `;
         
         // Add click event to play this track
         trackItem.addEventListener('click', function() {
+            if (!audioEngine) return;
+            
             const trackId = parseInt(this.dataset.id);
+            if (isNaN(trackId)) return;
+            
             audioEngine.loadTrack(trackId);
             audioEngine.play();
         });
@@ -518,11 +537,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add hover play icon
         trackItem.addEventListener('mouseover', function() {
             const trackNumber = this.querySelector('.track-number');
-            trackNumber.innerHTML = '<i class="fas fa-play"></i>';
+            if (trackNumber) trackNumber.innerHTML = '<i class="fas fa-play"></i>';
         });
         
         trackItem.addEventListener('mouseout', function() {
             const trackNumber = this.querySelector('.track-number');
+            if (!trackNumber) return;
+            
             if (!this.classList.contains('active')) {
                 trackNumber.textContent = parseInt(this.dataset.id) + 1;
             }
@@ -536,6 +557,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.track-item').forEach(item => {
             item.classList.remove('active');
             const trackNumber = item.querySelector('.track-number');
+            if (!trackNumber) return;
+            
             const itemId = parseInt(item.dataset.id);
             
             if (itemId === index) {
@@ -549,36 +572,42 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Player controls event listeners
     playButton.addEventListener('click', function() {
-        if (tracks.length === 0) return;
+        if (!audioEngine || tracks.length === 0) return;
         audioEngine.togglePlay();
     });
     
     prevButton.addEventListener('click', function() {
+        if (!audioEngine) return;
         audioEngine.previous();
     });
     
     nextButton.addEventListener('click', function() {
+        if (!audioEngine) return;
         audioEngine.next();
     });
     
     shuffleButton.addEventListener('click', function() {
+        if (!audioEngine) return;
         const shuffleEnabled = audioEngine.toggleShuffle();
         this.classList.toggle('active', shuffleEnabled);
     });
     
     repeatButton.addEventListener('click', function() {
+        if (!audioEngine) return;
         const repeatEnabled = audioEngine.toggleRepeat();
         this.classList.toggle('active', repeatEnabled);
     });
     
     // Progress bar interaction
     progressBar.addEventListener('click', function(e) {
+        if (!audioEngine) return;
         const clickPosition = e.offsetX / progressBar.offsetWidth;
         audioEngine.seekByPercentage(clickPosition * 100);
     });
     
     // Volume bar interaction
     volumeBar.addEventListener('click', function(e) {
+        if (!audioEngine) return;
         const volume = e.offsetX / volumeBar.offsetWidth;
         audioEngine.setVolume(volume);
         volumeFill.style.width = `${volume * 100}%`;
@@ -588,6 +617,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Volume button mute/unmute toggle
     let previousVolume = 0.7; // 70%
     volumeButton.addEventListener('click', function() {
+        if (!audioEngine) return;
+        
         if (audioEngine.volume > 0) {
             previousVolume = audioEngine.volume;
             audioEngine.setVolume(0);
@@ -615,6 +646,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('keydown', function(e) {
         // Only if we're not in an input field
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (!audioEngine) return;
         
         switch(e.key) {
             case ' ': // Space bar
@@ -648,4 +680,50 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
         }
     });
+
+    // File input for manual uploads
+    const fileInputEl = document.getElementById('fileInput');
+    if (fileInputEl) {
+        fileInputEl.addEventListener('change', function (event) {
+            const files = event.target.files;
+            const libraryList = document.getElementById('libraryList');
+            if (!libraryList) return;
+            
+            libraryList.innerHTML = ''; // Clear previous list
+        
+            Array.from(files).forEach((file, index) => {
+                try {
+                    const audioURL = URL.createObjectURL(file);
+                    const listItem = document.createElement('li');
+                    const audio = new Audio(audioURL);
+                
+                    audio.addEventListener('loadedmetadata', () => {
+                        const duration = formatTime(audio.duration);
+                        listItem.textContent = `${file.name} (${duration})`;
+                    });
+                
+                    listItem.addEventListener('click', () => {
+                        playAudioFile(audioURL);
+                    });
+                
+                    libraryList.appendChild(listItem);
+                } catch (error) {
+                    console.error('Error processing file for library list:', error);
+                }
+            });
+        });
+    }
+    
+    function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    function playAudioFile(audioURL) {
+        const audio = new Audio(audioURL);
+        audio.play();
+ 
+    }
+    
 });
