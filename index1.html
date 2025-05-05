@@ -6,7 +6,6 @@
     <title>Modern Music Player</title>
     <link rel="stylesheet" href="styles1.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/CoreUI-Icons/2.0.0/css/all.min.css" rel="stylesheet">
     <link rel="icon" href="path/to/your/favicon.ico" type="image/x-icon" />
 
     
@@ -20,9 +19,8 @@
                 <h1>Music Player</h1>
             </div>
             <ul class="nav-menu">
-                <li class="nav-item active"><i class="fas fa-home"></i> Home</li>
+                <li class="nav-item active" id="library-section"><i class="fas fa-bookmark"></i> Library</li>
                 <li class="nav-item"><i class="fas fa-search"></i> Search</li>
-                <li class="nav-item"><i class="fas fa-bookmark"></i> Library</li>
                 <li class="nav-item" id="upload-music"><i class="fas fa-upload"></i> Upload Music</li>
                 <li class="nav-item"><i class="fas fa-heart"></i> Liked Songs</li>
             </ul>
@@ -55,6 +53,8 @@
                     <p id="upload-status" class="upload-status"></p>
                 </div>
             </section>
+
+
 
             <section class="featured-content">
                 <h2>Your Library</h2>
@@ -93,6 +93,7 @@
         </main>
     </div>
 
+
     <!-- Player Controls (Fixed at Bottom) -->
     <footer class="player-controls">
         <div class="now-playing">
@@ -128,14 +129,23 @@
         </div>
     </footer>
 
+    <div id="librarySection">
+        <h2 class="library-title">Library</h2>
+        <input type="file" id="fileInput" accept="audio/*" multiple />
+        <ul id="libraryList" class="library-list"></ul>
+      </div>
+      
+      
     <!-- Audio Element (Hidden) -->
     <audio id="audio-player"></audio>
 
-<script></script>
+    
+
 <script src="audio-playback-engine.js"></script>
 <script src="metadata-extractor.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
     <script src="script1.js"></script>
     <script src="audio-visualizer.js"></script>
+  
 </body>
 </html>
