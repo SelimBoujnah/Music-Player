@@ -19,11 +19,10 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      nodeIntegration: false,             // Disable for security
-      contextIsolation: true,             // Required for contextBridge
+      nodeIntegration: true,
+      contextIsolation: false,
       preload: path.join(__dirname, 'preload.js')
     }
-    
   });
 
   // Load the index.html of the app
