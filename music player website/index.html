@@ -1,23 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta http-equiv="Content-Security-Policy"
-    content="
-      default-src 'self';
-      script-src 'self';
-      style-src 'self' 'unsafe-inline';
-      font-src 'self' https://cdnjs.cloudflare.com;
-      img-src 'self' data:;
-      object-src 'none';
-      base-uri 'none';
-      frame-ancestors 'none';
-    ">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;">
     <title>Modern Music Player</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-</head>
+
 <body class="light-mode">
     <div class="app-container">
         <!-- Sidebar Navigation -->
@@ -137,6 +127,6 @@
     <!-- Audio Element (Hidden) -->
     <audio id="audio-player"></audio>
 
-    <script src="script.js"></script>
+    <script src="script1.js"></script>
 </body>
 </html>

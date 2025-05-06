@@ -16,26 +16,21 @@ function createWindow() {
 
   // Create the browser window
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1200,
+    height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'), 
-      contextIsolation: true,
-      enableRemoteModule: false,
-      nodeIntegration: false,
-    
+      nodeIntegration: false,             // Disable for security
+      contextIsolation: true,             // Required for contextBridge
+      preload: path.join(__dirname, 'preload.js')
     }
     
   });
 
   // Load the index.html of the app
-  mainWindow.loadFile('index.html');
+  mainWindow.loadFile('index1.html');
   
   // Open the DevTools in development (comment out for production)
-  if (!app.isPackaged) {
-    mainWindow.webContents.openDevTools();
-  }
-  
+  mainWindow.webContents.openDevTools();
 
   
 
