@@ -143,8 +143,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         trackData.name = nameParts.slice(1).join(' - ');
                     }
                     
-                    // Add to tracks array
-                    tracks.push(trackData);
+                    // Check for duplicate by name and duration
+if (tracks.some(t => t.name === trackData.name && Math.abs(t.duration - trackData.duration) < 1)) {
+    console.warn(`Duplicate skipped: ${trackData.name}`);
+    loadedCount++;
+    if (loadedCount === files.length) {
+        uploadStatus.textContent = `Successfully added ${files.length - loadedCount} new track(s)`;
+        setTimeout(() => uploadStatus.textContent = '', 3000);
+    }
+    return;
+}
                     
                     // Add to UI
                     addTrackToUI(trackData);
