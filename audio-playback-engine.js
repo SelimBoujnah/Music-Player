@@ -12,20 +12,16 @@ class AudioEngine {
         this.onTrackChange = null;
         this.onPlayStateChange = null;
 
-        // AudioContext + Visualizer setup
+        // AudioContext setup
         this.audioContext = null;
         this.audioSource = null;
-        this.audioVisualizer = null;
-        this.visualizerCanvas = null;
     }
 
-    init(audioElement, visualizerCanvas = null) {
+    init(audioElement) {
         this.audioElement = audioElement;
         this.audioElement.volume = this.volume;
 
-        if (visualizerCanvas) {
-            this.visualizerCanvas = visualizerCanvas;
-        }
+    
 
         // Set up time update listener
         this.audioElement.addEventListener('timeupdate', () => {
@@ -37,7 +33,7 @@ class AudioEngine {
             }
         });
 
-        // Set up end-of-track handling
+        // end-of-track handling
         this.audioElement.addEventListener('ended', () => {
             if (this.repeat) {
                 this.play();
@@ -64,22 +60,6 @@ class AudioEngine {
                 }
             } catch (e) {
                 console.warn("AudioSource creation failed:", e.message);
-            }
-        }
-    }
-
-    setupVisualizer(AudioVisualizerClass) {
-        if (!this.visualizerCanvas || !this.audioContext || !this.audioSource) return;
-
-        if (!this.audioVisualizer) {
-            this.audioVisualizer = new AudioVisualizerClass(
-                this.visualizerCanvas,
-                this.audioContext,
-                this.audioSource
-            );
-
-            if (this.audioVisualizer.init()) {
-                this.audioVisualizer.resizeCanvas();
             }
         }
     }

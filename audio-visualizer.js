@@ -32,7 +32,7 @@ class AudioVisualizer {
             this.audioSource.connect(this.analyser);
             
             // Configure analyser for waveform data
-            this.analyser.fftSize = 2048; // Larger FFT for smoother waveform
+            this.analyser.fftSize = 2048;
             this.bufferLength = this.analyser.frequencyBinCount;
             this.dataArray = new Uint8Array(this.bufferLength);
             this.analyser.smoothingTimeConstant = this.smoothing;

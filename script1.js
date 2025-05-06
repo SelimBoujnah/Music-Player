@@ -41,7 +41,6 @@ window.addEventListener('DOMContentLoaded',async function() {
     playerControls.insertBefore(visualizerContainer, playerRight)
 
     // State variables for folder management
-    let folders = ['root']; // 'root' is the default folder
     let currentFolder = 'root';
     let tracks = [];
     let isLiked = false;
@@ -52,7 +51,6 @@ window.addEventListener('DOMContentLoaded',async function() {
     
     
     // Call on app launch with checks to prevent errors
-   
 function safeLoadLastUsedFolder() {
     // Only try to load last folder if we're in Electron
     if (isElectron && typeof window.electron.getLastMusicFolder === 'function') {
@@ -104,6 +102,7 @@ function safeLoadLastUsedFolder() {
     
      // Initialize the audio visualizer when we play a track
      function initializeVisualizer() {
+
         // Make sure AudioEngine exists before trying to use it
         if (typeof AudioEngine !== 'function') {
             console.error('AudioEngine not defined');
@@ -253,7 +252,7 @@ function safeLoadLastUsedFolder() {
         }
     }
     
-    // Theme management
+    // Theme management (LIGHT MODE AND DARK MODE)
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         body.classList.add('dark-mode');
@@ -314,30 +313,87 @@ function safeLoadLastUsedFolder() {
         libraryBtn.classList.add('active');
     });
 
+ // Audio file processing
+ function processAudioFiles(files) {
+    if (!files || files.length === 0) {
+        console.warn('No files to process');
+        return;
+    }
     
-    // File input change handler
-    // fileInput.addEventListener('change', function(e) {
-    //     const files = Array.from(e.target.files);
-    //     if (files.length === 0) return;
-        
-    //     uploadStatus.textContent = `Loading ${files.length} file(s)...`;
-        
-    //     // Filter for audio files
-    //     const audioFiles = files.filter(file => {
-    //         const validTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/flac', 'audio/mp4'];
-    //         return validTypes.includes(file.type);
-    //     });
-        
-    //     if (audioFiles.length === 0) {
-    //         uploadStatus.textContent = 'No valid audio files selected.';
-    //         return;
-    //     }
-         
-    //     // Process audio files
-    //     processAudioFiles(audioFiles);
-    // });
+    // Clear existing library if this is first upload
+    if (tracks.length === 0) {
+        musicLibrary.innerHTML = '';
+    }
     
+    let processedCount = 0;
+    const newTracks = [];
+    
+    files.forEach(async (file) => {
+        try {
+            // Check if AudioMetadataExtractor exists
+            if (typeof AudioMetadataExtractor !== 'object') {
+                console.error('AudioMetadataExtractor not available');
+                throw new Error('Metadata extractor not available');
+            }
+            
+            // Use AudioMetadataExtractor to get comprehensive metadata
+            const metadata = await AudioMetadataExtractor.extractMetadata(file);
+            
+            // Create track object with extracted metadata
+            const trackData = {
+                id: tracks.length + newTracks.length,
+                name: metadata.name || file.name || 'Unknown Track',
+                artist: metadata.artist || 'Unknown Artist',
+                album: metadata.album || 'Unknown Album',
+                genre: metadata.genre || '',
+                year: metadata.year || '',
+                duration: metadata.duration || 0,
+                coverArt: metadata.coverArt || null,
+                fileType: metadata.fileType || file.type,
+                url: await AudioMetadataExtractor.fileToDataURL(file),
+                folder: currentFolder // Add folder property
+            };
+            
+            // Add to new tracks array
+            newTracks.push(trackData);
+            
+            // Check if all files have been processed
+            processedCount++;
+            if (processedCount === files.length) {
+                finishLoadingTracks(newTracks);
+            }
+        } catch (error) {
+            console.error('Error processing file:', error);
+            
+            // Create a basic track entry even if metadata extraction fails
+            try {
+                const basicTrackData = {
+                    id: tracks.length + newTracks.length,
+                    name: file.name || 'Unknown Track',
+                    artist: 'Unknown Artist',
+                    album: 'Unknown Album',
+                    duration: 0,
+                    url: URL.createObjectURL(file),
+                    folder: currentFolder
+                };
+                
+                newTracks.push(basicTrackData);
+            } catch (fallbackError) {
+                console.error('Failed to create basic track data:', fallbackError);
+            }
+            
+            processedCount++;
+            
+            // Check if all files have been processed
+            if (processedCount === files.length) {
+                finishLoadingTracks(newTracks);
+            }
+        }
+    });
+}
 
+    
+// File upload method
     fileInput.addEventListener('change', function(e) {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
@@ -372,85 +428,7 @@ function safeLoadLastUsedFolder() {
     
     
 
-    // Enhanced audio file processing with error handling
-    function processAudioFiles(files) {
-        if (!files || files.length === 0) {
-            console.warn('No files to process');
-            return;
-        }
-        
-        // Clear existing library if this is first upload
-        if (tracks.length === 0) {
-            musicLibrary.innerHTML = '';
-        }
-        
-        let processedCount = 0;
-        const newTracks = [];
-        
-        files.forEach(async (file) => {
-            try {
-                // Check if AudioMetadataExtractor exists
-                if (typeof AudioMetadataExtractor !== 'object') {
-                    console.error('AudioMetadataExtractor not available');
-                    throw new Error('Metadata extractor not available');
-                }
-                
-                // Use AudioMetadataExtractor to get comprehensive metadata
-                const metadata = await AudioMetadataExtractor.extractMetadata(file);
-                
-                // Create track object with extracted metadata
-                const trackData = {
-                    id: tracks.length + newTracks.length,
-                    name: metadata.name || file.name || 'Unknown Track',
-                    artist: metadata.artist || 'Unknown Artist',
-                    album: metadata.album || 'Unknown Album',
-                    genre: metadata.genre || '',
-                    year: metadata.year || '',
-                    duration: metadata.duration || 0,
-                    coverArt: metadata.coverArt || null,
-                    fileType: metadata.fileType || file.type,
-                    url: await AudioMetadataExtractor.fileToDataURL(file),
-                    folder: currentFolder // Add folder property
-                };
-                
-                // Add to new tracks array
-                newTracks.push(trackData);
-                
-                // Check if all files have been processed
-                processedCount++;
-                if (processedCount === files.length) {
-                    finishLoadingTracks(newTracks);
-                }
-            } catch (error) {
-                console.error('Error processing file:', error);
-                
-                // Create a basic track entry even if metadata extraction fails
-                try {
-                    const basicTrackData = {
-                        id: tracks.length + newTracks.length,
-                        name: file.name || 'Unknown Track',
-                        artist: 'Unknown Artist',
-                        album: 'Unknown Album',
-                        duration: 0,
-                        url: URL.createObjectURL(file),
-                        folder: currentFolder
-                    };
-                    
-                    newTracks.push(basicTrackData);
-                } catch (fallbackError) {
-                    console.error('Failed to create basic track data:', fallbackError);
-                }
-                
-                processedCount++;
-                
-                // Check if all files have been processed
-                if (processedCount === files.length) {
-                    finishLoadingTracks(newTracks);
-                }
-            }
-        });
-    }
-    
+   
     // Helper function to finish loading tracks
     function finishLoadingTracks(newTracks) {
         if (!newTracks || newTracks.length === 0) {
